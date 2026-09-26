@@ -1,7 +1,10 @@
 import { useAuthStore } from '~/modules/auth/authStore'
 
 const ACCESS_TOKEN_COOKIE = 'shop_access_token'
-let clientAccessToken: string | null = null
+// ref, а не змінна: authStore.isAuthenticated має реагувати на вихід/оновлення токена
+const clientAccessToken = ref<string | null>(null)
+// Маркер «була сесія»: refresh-cookie httpOnly, тож без нього не знаємо, чи варто пробувати refresh при старті
+const SESSION_HINT_KEY = 'shop_has_session'
 let clientAccessTokenCookie: ReturnType<typeof useAccessTokenCookie> | null = null
 
 function useAccessTokenCookie() {
@@ -16,7 +19,7 @@ function useAccessTokenCookie() {
 
 export function getAccessToken(): string | null {
   if (import.meta.client) {
-    return clientAccessToken ?? clientAccessTokenCookie?.value ?? null
+    return clientAccessToken.value ?? clientAccessTokenCookie?.value ?? null
   }
 
   return useAccessTokenCookie().value
@@ -24,7 +27,7 @@ export function getAccessToken(): string | null {
 
 export function setAccessToken(token: string | null): void {
   if (import.meta.client) {
-    clientAccessToken = token
+    clientAccessToken.value = token
     if (clientAccessTokenCookie) {
       clientAccessTokenCookie.value = token
     }
@@ -44,18 +47,19 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   if (import.meta.client) {
     clientAccessTokenCookie = accessTokenCookie
-    clientAccessToken ??= accessTokenCookie.value
+    clientAccessToken.value ??= accessTokenCookie.value
   }
 
   function readAccessToken(): string | null {
     return import.meta.client
-      ? clientAccessToken ?? accessTokenCookie.value
+      ? clientAccessToken.value ?? accessTokenCookie.value
       : accessTokenCookie.value
   }
 
   function writeAccessToken(token: string | null): void {
     if (import.meta.client) {
-      clientAccessToken = token
+      clientAccessToken.value = token
+      try { token ? localStorage.setItem(SESSION_HINT_KEY, '1') : localStorage.removeItem(SESSION_HINT_KEY) } catch { /* storage недоступний */ }
     }
     accessTokenCookie.value = token
   }
@@ -84,7 +88,10 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   }
 
-  const api = $fetch.create({
+  // Один refresh на всі паралельні запити
+  const refresh = () => (refreshPromise ??= refreshAccessToken().finally(() => (refreshPromise = null)))
+
+  const baseApi = $fetch.create({
     baseURL: apiBase,
     credentials: 'include',
 
@@ -99,40 +106,34 @@ export default defineNuxtPlugin((nuxtApp) => {
       if (ssrCookie && !headers.has('cookie')) headers.set('cookie', ssrCookie)
       options.headers = headers
     },
-
-    async onResponseError(context) {
-      const { response, request, options } = context
-
-      if (response.status !== 401) {
-        return
-      }
-
-      if (String(request).includes('/auth/refresh')) {
-        await clearAuthAndRedirect()
-        return
-      }
-
-      refreshPromise ??= refreshAccessToken()
-      const newToken = await refreshPromise
-      refreshPromise = null
-
-      if (newToken) {
-        const headers = new Headers(options.headers)
-        headers.set('Authorization', `Bearer ${newToken}`)
-        options.headers = headers
-
-        return $fetch(String(request), options as Parameters<typeof $fetch>[1])
-      }
-
-      await clearAuthAndRedirect()
-    },
   })
+
+  // Повтор після 401 робимо тут, а не в onResponseError: ofetch ігнорує значення, яке повертає хук,
+  // і все одно кидає початкову помилку — тоді сторінка отримувала 401 навіть після вдалого refresh.
+  const api = (async (request, options) => {
+    try {
+      return await baseApi(request, options)
+    }
+    catch (error) {
+      if ((error as { status?: number }).status !== 401) throw error
+      if (await refresh()) return baseApi(request, options)
+      await clearAuthAndRedirect()
+      throw error
+    }
+  }) as typeof baseApi
+
+  // Сесія протухла, поки вкладка була закрита: тихо відновлюємо за refresh-cookie і на публічних сторінках
+  if (import.meta.client && !readAccessToken()) {
+    let hadSession = false
+    try { hadSession = localStorage.getItem(SESSION_HINT_KEY) === '1' } catch { /* storage недоступний */ }
+    if (hadSession) nuxtApp.hook('app:mounted', () => { refresh() })
+  }
 
   return {
     provide: {
       api,
       // Для middleware: відновити сесію за refresh-cookie, коли access-токен уже протух
-      refreshAccessToken: () => (refreshPromise ??= refreshAccessToken().finally(() => (refreshPromise = null))),
+      refreshAccessToken: refresh,
     },
   }
 })

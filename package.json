@@ -7,7 +7,9 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@nuxt/icon": "^2.2.1",
@@ -30,10 +32,15 @@
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.118",
     "@iconify-json/mdi": "^1.2.3",
+    "@nuxt/test-utils": "^4.3.2",
     "@nuxtjs/device": "^4.0.0",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^25.5.2",
     "@vue/language-core": "^3.2.6",
+    "@vue/test-utils": "^2.5.1",
+    "happy-dom": "^20.14.5",
     "sass-embedded": "^1.99.0",
+    "vitest": "^5.0.2",
     "vue-tsc": "^3.2.6"
   }
 }

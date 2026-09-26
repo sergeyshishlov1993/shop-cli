@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<yml_catalog><shop>
+  <categories>
+    <category id="1">E2E Категорія</category>
+  </categories>
+  <offers>
+    <offer id="e2e-1" available="true">
+      <name>E2E YML товар</name><vendorCode>E2E-YML-SKU-1</vendorCode><price>999</price>
+      <categoryId>1</categoryId><vendor>E2E</vendor>
+      <param name="Розмір">M</param>
+      <stock_quantity>3</stock_quantity>
+      <description><![CDATA[<p>E2E fixture</p>]]></description>
+    </offer>
+  </offers>
+</shop></yml_catalog>
