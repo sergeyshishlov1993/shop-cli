@@ -33,8 +33,7 @@ const total = computed(() => ret.value?.items.reduce((sum, i) => sum + i.unitPri
 
 async function cancel() {
   if (!ret.value) return
-  const ok = await confirm({ title: 'Скасувати заявку?', message: 'Заявку на повернення буде скасовано. Ви зможете подати нову, поки не минув строк повернення.', confirmText: 'Скасувати заявку', cancelText: 'Ні', variant: 'warning' })
-  if (!ok) return
+  if (!(await confirm({ title: 'Скасувати заявку?', message: 'Заявку на повернення буде скасовано. Ви зможете подати нову, поки не минув строк повернення.', confirmText: 'Скасувати заявку', cancelText: 'Ні', variant: 'warning' }))) return
   busy.value = true
   try { ret.value = await returnsApi.cancel(ret.value.id); toast.success('Заявку скасовано') }
   catch (e) { toast.error(getApiError(e, 'Не вдалося скасувати заявку')) }

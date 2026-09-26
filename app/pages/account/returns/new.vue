@@ -52,7 +52,7 @@ watch(photoFile, async (file) => {
 
 async function submit() {
   submitted.value = true
-  if (errors.value.items || errors.value.reason || errors.value.refundDetails) return
+  if (Object.values(errors.value).some(Boolean)) return
   submitting.value = true
   try {
     const created = await returnsApi.create({

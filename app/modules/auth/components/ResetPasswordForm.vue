@@ -64,8 +64,7 @@ async function handleSubmit() {
     toast.success('Пароль успішно змінено')
     await router.push('/login')
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Помилка зміни паролю'
-    toast.error(message)
+    toast.error(error instanceof Error ? error.message : 'Помилка зміни паролю')
   } finally {
     isLoading.value = false
   }

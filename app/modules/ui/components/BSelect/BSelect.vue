@@ -74,14 +74,11 @@ function onKeydown(event: KeyboardEvent) {
   const nextIndex = event.key === 'ArrowDown'
     ? Math.min(currentIndex + 1, props.options.length - 1)
     : Math.max(currentIndex - 1, 0)
-  const nextOption = props.options[nextIndex < 0 ? 0 : nextIndex]
-
+  const nextOption = props.options[nextIndex]
   if (nextOption) emit('update:modelValue', nextOption.value)
 }
 
-onClickOutside(root, () => {
-  isOpen.value = false
-})
+onClickOutside(root, () => { isOpen.value = false })
 </script>
 
 <template>

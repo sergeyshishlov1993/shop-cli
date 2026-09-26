@@ -36,8 +36,7 @@ async function handleSubmit() {
     })
     isSubmitted.value = true
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Помилка відправки'
-    toast.error(message)
+    toast.error(error instanceof Error ? error.message : 'Помилка відправки')
   } finally {
     isLoading.value = false
   }

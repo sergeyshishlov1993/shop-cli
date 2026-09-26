@@ -13,9 +13,7 @@ const authStore = useAuthStore()
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const isHome = computed(() => route.path === '/')
 
-function toggleSearch() {
-  isSearchOpen.value = !isSearchOpen.value
-}
+const toggleSearch = () => (isSearchOpen.value = !isSearchOpen.value)
 
 
 </script>

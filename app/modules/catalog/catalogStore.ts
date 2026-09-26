@@ -47,8 +47,7 @@ export const useCatalogStore = defineStore('catalog', () => {
   async function searchProducts(search: string) {
     searchLoading.value = true
     try {
-      const response = await catalogApi.getProducts({ search, limit: 8 })
-      searchResults.value = response.items
+      searchResults.value = (await catalogApi.getProducts({ search, limit: 8 })).items
     }
     finally {
       searchLoading.value = false

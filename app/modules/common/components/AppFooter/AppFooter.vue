@@ -104,15 +104,11 @@ const socialIconMap: Record<string, string> = {
 const socialLinks = computed(() => {
   return Object.entries(settings.value?.socialLinksJson ?? {})
     .filter(([, href]) => Boolean(href))
-    .map(([name, href]) => {
-      const normalizedName = name.toLowerCase()
-
-      return {
-        name,
-        href,
-        icon: socialIconMap[normalizedName] ?? 'lucide:external-link',
-      }
-    })
+    .map(([name, href]) => ({
+      name,
+      href,
+      icon: socialIconMap[name.toLowerCase()] ?? 'lucide:external-link',
+    }))
 })
 
 await useAsyncData('footer-data', async () => {

@@ -77,10 +77,7 @@ const article = computed(() => currentVariant.value?.sku ?? product.value?.varia
 const similarProducts = computed(() => relatedProducts.value?.similar ?? [])
 const boughtTogetherProducts = computed(() => relatedProducts.value?.boughtTogether ?? [])
 
-const selectedColorName = computed(() => {
-  if (!selectedColorId.value) return null
-  return colors.value.find(c => c.id === selectedColorId.value)?.name ?? null
-})
+const selectedColorName = computed(() => colors.value.find(c => c.id === selectedColorId.value)?.name ?? null)
 
 const availabilityLabel = computed(() => {
   if (availability.value === 'IN_STOCK') return 'В наявності'
@@ -88,15 +85,12 @@ const availabilityLabel = computed(() => {
   return 'Немає в наявності'
 })
 
-const selectedSizeName = computed(() => {
-  if (!selectedSizeId.value) return null
-  return sizes.value.find(size => size.id === selectedSizeId.value)?.name ?? null
-})
+const selectedSizeName = computed(() => sizes.value.find(size => size.id === selectedSizeId.value)?.name ?? null)
 
 const isSizeOpen = ref(false)
 const isSizeSheetOpen = ref(false)
 const sizeSelectRef = useTemplateRef<HTMLElement>('sizeSelectRef')
-onClickOutside(sizeSelectRef, () => { isSizeOpen.value = false })
+onClickOutside(sizeSelectRef, () => (isSizeOpen.value = false))
 function pickSize(sizeId: number) {
   selectSize(sizeId)
   isSizeOpen.value = false
@@ -123,16 +117,11 @@ const showDesktopSticky = ref(false)
 const purchaseBlockRef = ref<HTMLElement | null>(null)
 const onScroll = () => {
   showScrollTop.value = window.scrollY > 600
-  const purchaseBlock = purchaseBlockRef.value
   const headerBottom = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0
-  showDesktopSticky.value = Boolean(
-    purchaseBlock && purchaseBlock.getBoundingClientRect().bottom <= headerBottom,
-  )
+  showDesktopSticky.value = Boolean(purchaseBlockRef.value && purchaseBlockRef.value.getBoundingClientRect().bottom <= headerBottom)
 }
 
-const scrollToTop = () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
+const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
 onMounted(() => {
   onScroll()
@@ -167,20 +156,18 @@ function openQuickBuy() {
 }
 
 async function submitQuickBuy() {
-  if (!currentVariant.value) return
-  if (!quickBuyForm.value.name.trim() || !quickBuyForm.value.phone.trim()) return
+  if (!currentVariant.value || !quickBuyForm.value.name.trim() || !quickBuyForm.value.phone.trim()) return
 
   isQuickBuySubmitting.value = true
   try {
     await cartStore.addToCart(currentVariant.value.id, 1)
-    const idempotencyKey = crypto.randomUUID()
     await orderApi.create(
         {
           customerName: quickBuyForm.value.name.trim(),
           customerPhone: quickBuyForm.value.phone.trim(),
           deliveryProvider: 'PHONE_CONFIRMATION',
         },
-        idempotencyKey,
+        crypto.randomUUID(),
     )
     cartStore.clearCart()
     isQuickBuyOpen.value = false

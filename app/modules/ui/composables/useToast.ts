@@ -11,29 +11,15 @@ export function useToast() {
   const toasts = useState<Toast[]>('ui-toasts', () => [])
 
   function add(variant: Toast['variant'], message: string, duration = 5000) {
-    const id = ++toastId
-    toasts.value.push({ id, message, variant, duration })
+    toasts.value.push({ id: ++toastId, message, variant, duration })
   }
 
-  function remove(id: number) {
-    toasts.value = toasts.value.filter((toast) => toast.id !== id)
-  }
+  const remove = (id: number) => { toasts.value = toasts.value.filter((toast) => toast.id !== id) }
 
-  function success(message: string, duration?: number) {
-    add('success', message, duration)
-  }
-
-  function error(message: string, duration?: number) {
-    add('error', message, duration)
-  }
-
-  function warning(message: string, duration?: number) {
-    add('warning', message, duration)
-  }
-
-  function info(message: string, duration?: number) {
-    add('info', message, duration)
-  }
+  const success = (message: string, duration?: number) => add('success', message, duration)
+  const error = (message: string, duration?: number) => add('error', message, duration)
+  const warning = (message: string, duration?: number) => add('warning', message, duration)
+  const info = (message: string, duration?: number) => add('info', message, duration)
 
   return { toasts, remove, success, error, warning, info }
 }

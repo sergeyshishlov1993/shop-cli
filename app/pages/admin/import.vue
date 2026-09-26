@@ -53,7 +53,7 @@ async function doPreview() {
   report.value = null
   try {
     preview.value = await adminApi.importPreview(file.value)
-    map.sku = -1; map.price = -1; map.stockQty = -1
+    Object.assign(map, { sku: -1, price: -1, stockQty: -1 })
     guessMapping(preview.value.headers)
   }
   catch (e) {

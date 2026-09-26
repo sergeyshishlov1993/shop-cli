@@ -40,17 +40,14 @@ export function useConfirm() {
     })
   }
 
-  function accept() {
-    state.value.resolve?.(true)
+  function settle(result: boolean) {
+    state.value.resolve?.(result)
     state.value.isOpen = false
     state.value.resolve = null
   }
 
-  function cancel() {
-    state.value.resolve?.(false)
-    state.value.isOpen = false
-    state.value.resolve = null
-  }
+  const accept = () => settle(true)
+  const cancel = () => settle(false)
 
   return { state, confirm, accept, cancel }
 }

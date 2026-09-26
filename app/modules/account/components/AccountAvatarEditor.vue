@@ -11,10 +11,7 @@ const uploading = ref(false)
 const removing = ref(false)
 
 const profile = computed(() => accountStore.profile)
-const displayName = computed(() => {
-  const value = profile.value
-  return value ? [value.firstName, value.lastName].filter(Boolean).join(' ') || value.email : ''
-})
+const displayName = computed(() => profile.value ? [profile.value.firstName, profile.value.lastName].filter(Boolean).join(' ') || profile.value.email : '')
 const initials = computed(() => {
   const value = displayName.value.trim()
   return value ? value.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() : '?'

@@ -4,9 +4,7 @@ const { categories, activeSlug, activeParentSlug, loadCategories } = useCategory
 const expandedSlugs = ref<Set<string>>(new Set())
 
 watch(activeParentSlug, (slug) => {
-  if (slug) {
-    expandedSlugs.value.add(slug)
-  }
+  if (slug) expandedSlugs.value.add(slug)
 }, { immediate: true })
 
 function toggleExpand(slug: string) {
@@ -17,13 +15,9 @@ function toggleExpand(slug: string) {
   }
 }
 
-function isExpanded(slug: string): boolean {
-  return expandedSlugs.value.has(slug)
-}
+const isExpanded = (slug: string): boolean => expandedSlugs.value.has(slug)
 
-function isActive(slug: string): boolean {
-  return activeSlug.value === slug
-}
+const isActive = (slug: string): boolean => activeSlug.value === slug
 
 await loadCategories()
 </script>

@@ -29,12 +29,12 @@ const categories = computed(() => {
     .sort((a, b) => a.sortOrder - b.sortOrder)
 })
 
-const accordionItems = computed(() => [
+const accordionItems = [
   {
     key: 'categories',
     title: 'Каталог',
   },
-])
+]
 
 function navigateAndClose(path: string) {
   emit('update:modelValue', false)

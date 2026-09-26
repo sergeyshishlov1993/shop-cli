@@ -53,8 +53,7 @@ async function handleSubmit() {
     await authStore.login(form.email, form.password)
     emit('success')
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Помилка входу'
-    toast.error(message)
+    toast.error(error instanceof Error ? error.message : 'Помилка входу')
   } finally {
     isLoading.value = false
   }

@@ -72,9 +72,7 @@ watch(query, (value) => {
   runSearch(value.trim())
 })
 
-function close() {
-  emit('update:modelValue', false)
-}
+const close = () => emit('update:modelValue', false)
 
 async function submit(value = query.value) {
   const trimmed = value.trim()

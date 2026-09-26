@@ -11,13 +11,7 @@ const UTM_STORAGE_KEY = 'utm-data'
 
 export function useUtm() {
   function captureUtm() {
-    if (import.meta.server) {
-      return
-    }
-
-    const storedValue = sessionStorage.getItem(UTM_STORAGE_KEY)
-
-    if (storedValue) {
+    if (import.meta.server || sessionStorage.getItem(UTM_STORAGE_KEY)) {
       return
     }
 
@@ -36,42 +30,22 @@ export function useUtm() {
   }
 
   function getUtmData(): UtmData {
-    if (import.meta.server) {
-      return {
-        utmSource: null,
-        utmMedium: null,
-        utmCampaign: null,
-        utmContent: null,
-        utmTerm: null,
-        referer: null,
+    const storedValue = import.meta.server ? null : sessionStorage.getItem(UTM_STORAGE_KEY)
+
+    if (storedValue) {
+      try {
+        return JSON.parse(storedValue) as UtmData
       }
+      catch { /* битые данные — отдаём пустые */ }
     }
 
-    const storedValue = sessionStorage.getItem(UTM_STORAGE_KEY)
-
-    if (!storedValue) {
-      return {
-        utmSource: null,
-        utmMedium: null,
-        utmCampaign: null,
-        utmContent: null,
-        utmTerm: null,
-        referer: null,
-      }
-    }
-
-    try {
-      return JSON.parse(storedValue) as UtmData
-    }
-    catch {
-      return {
-        utmSource: null,
-        utmMedium: null,
-        utmCampaign: null,
-        utmContent: null,
-        utmTerm: null,
-        referer: null,
-      }
+    return {
+      utmSource: null,
+      utmMedium: null,
+      utmCampaign: null,
+      utmContent: null,
+      utmTerm: null,
+      referer: null,
     }
   }
 

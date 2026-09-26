@@ -10,7 +10,7 @@ const statusOptions = [{ label: 'Усі', value: '' }, { label: 'Опублік�
 const AUTO_PAGES = 3; const page = ref(1); const totalPages = ref(0); const loading = ref(false); const sentinel = ref<HTMLElement | null>(null); const sentinelVisible = ref(false)
 const hasMore = computed(() => page.value < totalPages.value)
 async function fetchPage(p: number) { loading.value = true; try { const res = await adminApi.reviews({ status: status.value || undefined, page: p }); reviews.value = p > 1 ? [...reviews.value, ...res.items] : res.items; page.value = p; totalPages.value = res.totalPages } catch (e) { toast.error(getAdminError(e)) } finally { loading.value = false } }
-function load() { return fetchPage(1) }
+const load = () => fetchPage(1)
 function loadMore() { if (!loading.value && hasMore.value) fetchPage(page.value + 1) }
 useIntersectionObserver(sentinel, ([entry]) => { sentinelVisible.value = !!entry?.isIntersecting })
 watch([sentinelVisible, loading], () => { if (sentinelVisible.value && !loading.value && page.value < AUTO_PAGES) loadMore() })

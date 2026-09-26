@@ -79,9 +79,7 @@ selectedSizeId.value = null
 }
 }
 
-function selectSize(id: number) {
-selectedSizeId.value = id
-}
+const selectSize = (id: number) => (selectedSizeId.value = id)
 
 watch(
 () => toValue(slug),

@@ -8,9 +8,7 @@ definePageMeta({
 
 const router = useRouter()
 
-function handleSuccess() {
-  router.push('/')
-}
+const handleSuccess = () => router.push('/')
 </script>
 
 <template>

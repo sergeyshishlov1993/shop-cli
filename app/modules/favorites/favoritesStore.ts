@@ -28,12 +28,8 @@ export const useFavoritesStore = defineStore('favorites', () => {
     try {
       const result = await favoritesApi.check(uncheckedIds)
       for (const id of uncheckedIds) {
-        if (result[id]) {
-          favoriteIds.value.add(id)
-        }
-        else {
-          favoriteIds.value.delete(id)
-        }
+        if (result[id]) favoriteIds.value.add(id)
+        else favoriteIds.value.delete(id)
       }
     }
     catch (error) {

@@ -85,9 +85,7 @@ async function loadProducts() {
   }
 }
 
-async function loadCategories() {
-  categories.value = await adminApi.categories()
-}
+const loadCategories = async () => (categories.value = await adminApi.categories())
 
 function resetForm() {
   Object.assign(form, emptyForm())
@@ -213,15 +211,8 @@ async function removeProduct(product: AdminProduct) {
   }
 }
 
-async function applyFilters() {
-  page.value = 1
-  await loadProducts()
-}
-
-async function changePage(nextPage: number) {
-  page.value = nextPage
-  await loadProducts()
-}
+async function applyFilters() { page.value = 1; await loadProducts() }
+async function changePage(nextPage: number) { page.value = nextPage; await loadProducts() }
 
 await Promise.all([loadProducts(), loadCategories()])
 </script>

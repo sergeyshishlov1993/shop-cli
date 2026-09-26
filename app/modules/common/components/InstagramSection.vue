@@ -36,12 +36,8 @@ const formatCount = (value?: number | null) => (value ?? 0) >= 1000
   ? `${(value! / 1000).toFixed(1).replace('.', ',').replace(',0', '')} тис.`
   : String(value ?? 0)
 
-function open(index: number) {
-  openIndex.value = index
-}
-function close() {
-  openIndex.value = null
-}
+const open = (index: number) => (openIndex.value = index)
+const close = () => (openIndex.value = null)
 function step(delta: number) {
   if (openIndex.value === null || !posts.value.length) return
   openIndex.value = (openIndex.value + delta + posts.value.length) % posts.value.length

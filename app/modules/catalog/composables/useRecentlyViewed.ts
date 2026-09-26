@@ -23,10 +23,9 @@ export function useRecentlyViewed() {
 
   function add(item: RecentItem) {
     load()
-    const next = [item, ...items.value.filter(i => i.slug !== item.slug)].slice(0, MAX)
-    items.value = next
+    items.value = [item, ...items.value.filter(i => i.slug !== item.slug)].slice(0, MAX)
     try {
-      localStorage.setItem(KEY, JSON.stringify(next))
+      localStorage.setItem(KEY, JSON.stringify(items.value))
     }
     catch { /* приватный режим — пропускаем */ }
   }

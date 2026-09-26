@@ -62,8 +62,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   async function clearAuthAndRedirect(): Promise<void> {
     await nuxtApp.runWithContext(async () => {
-      const authStore = useAuthStore()
-      authStore.clearAuth()
+      useAuthStore().clearAuth()
       await navigateTo('/login')
     })
   }

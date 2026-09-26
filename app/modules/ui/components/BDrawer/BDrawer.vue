@@ -31,9 +31,7 @@ const positionClass = computed(() => {
 
 const transitionName = computed(() => `b-slide-${drawerPosition.value}`)
 
-function close() {
-  emit('update:modelValue', false)
-}
+const close = () => emit('update:modelValue', false)
 
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && props.modelValue) close()

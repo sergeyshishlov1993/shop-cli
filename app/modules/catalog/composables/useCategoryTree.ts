@@ -10,21 +10,13 @@ export function useCategoryTree() {
     const result: Category[] = []
 
     for (const parent of categories.value) {
-      result.push(parent)
-
-      if (parent.children?.length) {
-        for (const child of parent.children) {
-          result.push(child)
-        }
-      }
+      result.push(parent, ...(parent.children ?? []))
     }
 
     return result
   })
 
-  const activeSlug = computed<string | null>(() => {
-    return (route.params.slug as string) || null
-  })
+  const activeSlug = computed<string | null>(() => (route.params.slug as string) || null)
 
   const activeCategory = computed<Category | null>(() => {
     if (!activeSlug.value) return null
@@ -46,9 +38,7 @@ export function useCategoryTree() {
     return flatCategories.value.find((category: Category) => category.slug === slug)
   }
 
-  async function loadCategories() {
-    await catalogStore.fetchCategories()
-  }
+  const loadCategories = () => catalogStore.fetchCategories()
 
   return {
     categories,
@@ -57,6 +47,6 @@ export function useCategoryTree() {
     activeCategory,
     activeParentSlug,
     findBySlug,
-      loadCategories,
+    loadCategories,
   }
 }

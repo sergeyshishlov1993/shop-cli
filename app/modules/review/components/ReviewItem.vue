@@ -67,14 +67,12 @@ async function onDelete() {
   }
 }
 
-const formattedDate = computed(() => {
-  return new Date(props.review.createdAt).toLocaleString('uk-UA', {
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).replace(',', '').replace(' о ', ' ')
-})
+const formattedDate = computed(() => new Date(props.review.createdAt).toLocaleString('uk-UA', {
+  day: 'numeric',
+  month: 'long',
+  hour: '2-digit',
+  minute: '2-digit',
+}).replace(',', '').replace(' о ', ' '))
 </script>
 
 <template>

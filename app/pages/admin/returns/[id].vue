@@ -47,14 +47,12 @@ async function submit() {
   if (!ret.value || !form.status || !canSubmit.value) return
   const status = form.status
   if (isRollback(status)) {
-    const ok = await confirm({ title: 'Скасувати «Отримано на складі»?', message: 'Заявка повернеться в статус «Схвалено», а додані на склад залишки буде списано назад.', confirmText: 'Скасувати отримання', variant: 'warning' })
-    if (!ok) return
+    if (!(await confirm({ title: 'Скасувати «Отримано на складі»?', message: 'Заявка повернеться в статус «Схвалено», а додані на склад залишки буде списано назад.', confirmText: 'Скасувати отримання', variant: 'warning' }))) return
   }
   else if (status === 'REJECTED' || status === 'REFUNDED') {
-    const ok = await confirm(status === 'REJECTED'
+    if (!(await confirm(status === 'REJECTED'
       ? { title: 'Відхилити заявку?', message: `Заявку ${ret.value.number} буде відхилено, клієнт отримає лист із причиною.${ret.value.status === 'RECEIVED' ? ' Залишки, додані при отриманні, буде списано назад.' : ''}`, confirmText: 'Відхилити', variant: 'danger' }
-      : { title: 'Підтвердити повернення коштів?', message: `Буде зафіксовано повернення ${formatPrice(refundNumber.value)} та створено витрату.`, confirmText: 'Гроші повернено', variant: 'warning' })
-    if (!ok) return
+      : { title: 'Підтвердити повернення коштів?', message: `Буде зафіксовано повернення ${formatPrice(refundNumber.value)} та створено витрату.`, confirmText: 'Гроші повернено', variant: 'warning' }))) return
   }
   saving.value = true
   try {

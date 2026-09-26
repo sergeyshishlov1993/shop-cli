@@ -28,10 +28,9 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     try {
       const { $api } = useNuxtApp()
-      const profile = await $api<User>('/storefront/account/profile')
-      user.value = profile
+      user.value = await $api<User>('/storefront/account/profile')
       isInitialized.value = true
-      return profile
+      return user.value
     }
     catch {
       clearAuth()
@@ -44,10 +43,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function onAuthSuccess(accessToken: string) {
     setAccessToken(accessToken)
-    const cartStore = useCartStore()
     await Promise.all([
       fetchProfile(),
-      cartStore.fetchCart(),
+      useCartStore().fetchCart(),
     ])
   }
 

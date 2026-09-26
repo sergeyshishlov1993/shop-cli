@@ -49,9 +49,7 @@ function pluralReviews(n: number) {
   return 'відгуків'
 }
 
-watch([sort, filter], () => {
-  load()
-})
+watch([sort, filter], () => load())
 
 const authStore = useAuthStore()
 // Профіль потрібен, щоб показати "Редагувати/Видалити" на власних відгуках

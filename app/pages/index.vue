@@ -87,16 +87,12 @@ const { data: categoryRails } = await useAsyncData('home-category-rails', async 
   }))
 }, { default: () => [] })
 
-const activeHero = computed(() => {
-  return data.value.heroSlides.find((slide) => slide.isActive) ?? data.value.heroSlides[0] ?? null
-})
+const activeHero = computed(() => data.value.heroSlides.find((slide) => slide.isActive) ?? data.value.heroSlides[0] ?? null)
 
-const activePromoBlocks = computed(() => {
-  return data.value.promoBlocks
-    .filter((block) => block.isActive)
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .slice(0, 3)
-})
+const activePromoBlocks = computed(() => data.value.promoBlocks
+  .filter((block) => block.isActive)
+  .sort((a, b) => a.sortOrder - b.sortOrder)
+  .slice(0, 3))
 
 function getProductSectionLink(query: 'isNew' | 'isHit' | 'isSeasonal') {
   return `/catalog?${query}=true`

@@ -36,10 +36,7 @@ function close() {
   emit('update:modelValue', false)
 }
 
-function onMaskClick() {
-  if (props.persistent) return
-  close()
-}
+const onMaskClick = () => { if (!props.persistent) close() }
 
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && props.modelValue && !props.persistent) close()

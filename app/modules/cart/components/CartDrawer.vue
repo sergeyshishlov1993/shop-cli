@@ -13,9 +13,7 @@ const emit = defineEmits<{
 
 const cartStore = useCartStore()
 
-function close() {
-  emit('update:modelValue', false)
-}
+const close = () => emit('update:modelValue', false)
 </script>
 
 <template>

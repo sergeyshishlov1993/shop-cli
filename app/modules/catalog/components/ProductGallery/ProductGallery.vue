@@ -55,8 +55,7 @@ function closeFullscreen() {
 }
 
 function handleKeydown(event: KeyboardEvent) {
-  if (!isFullscreen.value) return
-  if (event.key === 'Escape') closeFullscreen()
+  if (isFullscreen.value && event.key === 'Escape') closeFullscreen()
 }
 
 watch(isFullscreen, (open) => {

@@ -86,8 +86,7 @@ async function handleSubmit() {
     })
     emit('success')
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Помилка реєстрації'
-    toast.error(message)
+    toast.error(error instanceof Error ? error.message : 'Помилка реєстрації')
   } finally {
     isLoading.value = false
   }

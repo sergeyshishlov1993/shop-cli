@@ -15,8 +15,7 @@ const printing = ref(false)
 async function doSearch() {
   searching.value = true
   try {
-    const res = await adminApi.products({ search: search.value, limit: 20 })
-    products.value = res.items
+    products.value = (await adminApi.products({ search: search.value, limit: 20 })).items
   }
   catch (e) {
     toast.error(getAdminError(e))

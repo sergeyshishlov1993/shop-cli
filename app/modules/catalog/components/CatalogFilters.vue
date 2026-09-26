@@ -38,19 +38,11 @@ const sameValues = (a: (number | string)[], b: (number | string)[]): boolean =>
   a.length === b.length && a.every((item, index) => item === b[index])
 
 const activeCount = computed<number>(() => {
-  let count = 0
+  const { isNew, isHit, isSeasonal, priceMin, priceMax, colors, sizes, brands, seasons, materials } = modelValue.value
 
-  if (modelValue.value.isNew) count += 1
-  if (modelValue.value.isHit) count += 1
-  if (modelValue.value.isSeasonal) count += 1
-  if (modelValue.value.priceMin !== null || modelValue.value.priceMax !== null) count += 1
-  count += modelValue.value.colors.length
-  count += modelValue.value.sizes.length
-  count += modelValue.value.brands.length
-  count += modelValue.value.seasons.length
-  count += modelValue.value.materials.length
-
-  return count
+  return Number(isNew) + Number(isHit) + Number(isSeasonal)
+    + Number(priceMin !== null || priceMax !== null)
+    + colors.length + sizes.length + brands.length + seasons.length + materials.length
 })
 
 const syncModelValue = (next: CatalogFilterState): void => {
@@ -94,13 +86,9 @@ const syncModelValue = (next: CatalogFilterState): void => {
   }
 }
 
-const resetAllFilters = (): void => {
-  emit('reset')
-}
+const resetAllFilters = (): void => emit('reset')
 
-const applyFilters = (): void => {
-  isDrawerOpen.value = false
-}
+const applyFilters = () => (isDrawerOpen.value = false)
 </script>
 
 <template>

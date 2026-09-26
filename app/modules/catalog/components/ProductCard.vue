@@ -68,13 +68,9 @@ const discountPercent = computed(() => {
   return Math.round((1 - props.product.effectivePrice / props.product.oldPrice) * 100)
 })
 
-const mainImageUrl = computed(() => {
-  return getFileUrl(props.product.mainImage, 'medium') || null
-})
+const mainImageUrl = computed(() => getFileUrl(props.product.mainImage, 'medium') || null)
 
-const hoverImageUrl = computed(() => {
-  return getFileUrl(props.product.hoverImage, 'medium') || null
-})
+const hoverImageUrl = computed(() => getFileUrl(props.product.hoverImage, 'medium') || null)
 
 const hoverVideoUrl = computed(() => getFileUrl(props.product.hoverVideo) || null)
 
@@ -111,9 +107,7 @@ async function openQuickAdd() {
   try {
     await catalogStore.fetchProductBySlug(props.product.slug)
 
-    if (colors.value.length >= 1) {
-      selectedColor.value = colors.value[0]!.id
-    }
+    if (colors.value[0]) selectedColor.value = colors.value[0].id
 
     const sizeNames = new Set(variants.value.map(v => v.size?.name ?? v.sku))
     if (sizeNames.size === 1) {
@@ -157,15 +151,11 @@ function goToCart() {
 }
 
 function incrementQuantity() {
-  if (quantity.value < maxQuantity.value) {
-    quantity.value++
-  }
+  if (quantity.value < maxQuantity.value) quantity.value++
 }
 
 function decrementQuantity() {
-  if (quantity.value > 1) {
-    quantity.value--
-  }
+  if (quantity.value > 1) quantity.value--
 }
 
 async function toggleWishlist() {

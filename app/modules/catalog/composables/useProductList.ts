@@ -10,9 +10,7 @@ function toStringArray(value: RouteQueryValue): string[] | undefined {
   if (value === undefined || value === null) return undefined
 
   const raw = Array.isArray(value) ? value : String(value).split(',')
-  const cleaned = raw
-    .map(item => String(item ?? '').trim())
-    .filter(item => item.length > 0)
+  const cleaned = raw.map(item => String(item ?? '').trim()).filter(Boolean)
 
   return cleaned.length ? cleaned : undefined
 }
@@ -69,10 +67,9 @@ export function useProductList() {
     loading.value = true
     try {
       const cleanParams = Object.fromEntries(
-        Object.entries(params).filter(([, value]) => {
-          if (value === undefined || value === null) return false
-          return Array.isArray(value) ? value.length > 0 : true
-        }),
+        Object.entries(params).filter(([, value]) =>
+          value !== undefined && value !== null && (!Array.isArray(value) || value.length > 0),
+        ),
       )
       const response = await $api<ProductListResponse>('/storefront/products', {
         params: cleanParams,
@@ -97,18 +94,14 @@ export function useProductList() {
 
   function syncToUrl() {
     const query: Record<string, string> = {}
-    const skipKeys = new Set(['limit'])
-
     for (const [key, value] of Object.entries(params)) {
-      if (skipKeys.has(key) || value === undefined || value === null) continue
+      if (key === 'limit' || value === undefined || value === null) continue
       if (key === 'category' && value === routeCategory.value) continue
       if (Array.isArray(value)) {
         if (value.length) query[key] = value.join(',')
         continue
       }
-      if (value !== false) {
-        query[key] = String(value)
-      }
+      if (value !== false) query[key] = String(value)
     }
 
     router.replace({ query })
@@ -166,9 +159,7 @@ export function useProductList() {
       ([key, value]) => params[key as keyof CatalogQuery] !== value,
     )
 
-    if (hasChanges) {
-      loading.value = true
-    }
+    if (hasChanges) loading.value = true
 
     Object.assign(params, nextParams)
     syncToUrl()

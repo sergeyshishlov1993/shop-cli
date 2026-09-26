@@ -54,9 +54,7 @@ function onMove(e: PointerEvent) {
   if (overflowY > 0) props.form[d.y] = clamp(start.fy - (e.clientY - start.py) / overflowY)
 }
 
-function onUp() {
-  dragging.value = false
-}
+const onUp = () => (dragging.value = false)
 
 function position(d: Device) {
   return `${props.form[d.x] * 100}% ${props.form[d.y] * 100}%`

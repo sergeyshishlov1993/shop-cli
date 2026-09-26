@@ -66,8 +66,7 @@ async function saveOrder() {
 }
 
 async function loadTracking() {
-  if (!selectedOrder.value) return
-  if (!orderForm.trackingNumber.trim()) return
+  if (!selectedOrder.value || !orderForm.trackingNumber.trim()) return
   trackingLoading.value = true
   try {
     selectedOrder.value = await adminApi.updateOrder(selectedOrder.value.id, { internalComment: orderForm.internalComment, trackingNumber: orderForm.trackingNumber.trim() })
@@ -80,8 +79,7 @@ async function loadTracking() {
 async function changeStatus(order: AdminOrder, newStatus: AdminOrderStatus) {
   if (!newStatus || newStatus === order.status) return
   try {
-    const updated = await adminApi.updateOrderStatus(order.id, newStatus)
-    order.status = updated.status
+    order.status = (await adminApi.updateOrderStatus(order.id, newStatus)).status
     toast.success(`Статус ${order.orderNumber} оновлено`)
   } catch (error) {
     toast.error(getAdminError(error, 'Недопустимий перехід статусу'))

@@ -34,12 +34,10 @@ const toggleDisabled = ref(false)
 const isLoading = ref(false)
 const toggleLoading = () => {
   isLoading.value = true
-  setTimeout(() => { isLoading.value = false }, 2000)
+  setTimeout(() => (isLoading.value = false), 2000)
 }
 
-function onSearch(value: string) {
-  searchResult.value = value
-}
+const onSearch = (value: string) => (searchResult.value = value)
 
 const autocompleteValue = ref('')
 const autocompleteValueError = ref('')
@@ -77,9 +75,7 @@ const priceRange = ref({ min: 200, max: 800 })
 
 const tagVariants = ['primary', 'success', 'warning', 'danger', 'info', 'secondary'] as const
 const closedTags = ref<Set<string>>(new Set())
-function onTagClose(variant: string) {
-  closedTags.value.add(variant)
-}
+const onTagClose = (variant: string) => closedTags.value.add(variant)
 
 const currentPage = ref(1)
 const totalPages = ref(20)
@@ -113,31 +109,26 @@ const { confirm } = useConfirm()
 const confirmResult = ref<string>('')
 
 async function onConfirmPrimary() {
-  const result = await confirm({
+  confirmResult.value = await confirm({
     title: 'Зберегти зміни?',
     message: 'Ви впевнені, що хочете зберегти всі внесені зміни?',
     confirmText: 'Зберегти',
     cancelText: 'Відмінити',
-  })
-  confirmResult.value = result ? 'Підтверджено ✅' : 'Скасовано ❌'
+  }) ? 'Підтверджено ✅' : 'Скасовано ❌'
 }
 
 async function onConfirmDanger() {
-  const result = await confirm({
+  confirmResult.value = await confirm({
     title: 'Видалити товар?',
     message: 'Ця дія незворотна. Товар буде видалено назавжди.',
     confirmText: 'Видалити',
     cancelText: 'Скасувати',
     variant: 'danger',
-  })
-  confirmResult.value = result ? 'Видалено 🗑️' : 'Збережено 💾'
+  }) ? 'Видалено 🗑️' : 'Збережено 💾'
 }
 
 const fileValue = ref<File | null>(null)
 const imageFileValue = ref<File | null>(null)
 
-const previewUrl = computed(() => {
-  if (!imageFileValue.value) return null
-  return URL.createObjectURL(imageFileValue.value)
-})
+const previewUrl = computed(() => imageFileValue.value ? URL.createObjectURL(imageFileValue.value) : null)
 </script>

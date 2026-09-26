@@ -76,19 +76,12 @@ function onInput(value: string | undefined) {
   const nextValue = props.mode === 'phone' ? phoneMask.format(value ?? '') : value ?? ''
   emit('update:modelValue', nextValue)
 
-  if (props.mode === 'search') {
-    if (props.debounce > 0) {
-      debouncedSearch(nextValue)
-    }
-    else {
-      emit('search', nextValue)
-    }
-  }
+  if (props.mode !== 'search') return
+  if (props.debounce > 0) debouncedSearch(nextValue)
+  else emit('search', nextValue)
 }
 
-function onNativeInput(event: Event) {
-  onInput((event.target as HTMLInputElement).value)
-}
+const onNativeInput = (event: Event) => onInput((event.target as HTMLInputElement).value)
 
 function clear() {
   emit('update:modelValue', '')
