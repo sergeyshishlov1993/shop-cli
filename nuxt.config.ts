@@ -19,6 +19,16 @@ export default defineNuxtConfig({
         '~/assets/css/main.css',
     ],
 
+    // Захищені сторінки рендеримо на клієнті: refresh-cookie має Path=/api/auth і на SSR сторінки не приходить,
+    // тож відновити сесію після протухання access-токена можна лише в браузері.
+    routeRules: {
+        '/account': { ssr: false },
+        '/account/**': { ssr: false },
+        '/admin': { ssr: false },
+        '/admin/**': { ssr: false },
+        '/favorites': { ssr: false },
+    },
+
 
     vite: {
         plugins: [

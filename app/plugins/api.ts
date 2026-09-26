@@ -131,6 +131,8 @@ export default defineNuxtPlugin((nuxtApp) => {
   return {
     provide: {
       api,
+      // Для middleware: відновити сесію за refresh-cookie, коли access-токен уже протух
+      refreshAccessToken: () => (refreshPromise ??= refreshAccessToken().finally(() => (refreshPromise = null))),
     },
   }
 })
