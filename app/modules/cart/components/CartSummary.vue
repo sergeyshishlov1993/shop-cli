@@ -3,10 +3,12 @@ import { useCartStore } from '~/modules/cart/cartStore'
 
 interface Props {
   compact?: boolean
+  hideAction?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
   compact: false,
+  hideAction: false,
 })
 
 const cartStore = useCartStore()
@@ -22,6 +24,7 @@ const cartStore = useCartStore()
       <span class="text-base font-bold text-gray-900">{{ formatPrice(cartStore.subtotal) }}</span>
     </div>
     <BBtn
+        v-if="!hideAction"
         variant="primary"
         size="md"
         to="/checkout"
@@ -52,6 +55,7 @@ const cartStore = useCartStore()
     </div>
 
     <BBtn
+        v-if="!hideAction"
         variant="primary"
         size="lg"
         block

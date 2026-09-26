@@ -1,117 +1,97 @@
 <script setup lang="ts">
-import { watch, onUnmounted } from 'vue'
-
 interface Props {
   modelValue: boolean
-  side?: 'left' | 'right'
   title?: string
+  position?: 'left' | 'right' | 'top' | 'bottom'
+  side?: 'left' | 'right' | 'top' | 'bottom'
   width?: string
+  closable?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  side: 'right',
   title: '',
-  width: 'w-80',
+  position: undefined,
+  side: undefined,
+  width: 'w-[min(24rem,100vw)]',
+  closable: true,
 })
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
+const drawerPosition = computed(() => props.position ?? props.side ?? 'right')
+
+const positionClass = computed(() => {
+  if (drawerPosition.value === 'left') return `inset-y-0 left-0 h-dvh ${props.width}`
+  if (drawerPosition.value === 'right') return `inset-y-0 right-0 h-dvh ${props.width}`
+  if (drawerPosition.value === 'top') return 'inset-x-0 top-0 max-h-[85dvh] w-full'
+  return 'inset-x-0 bottom-0 max-h-[85dvh] w-full'
+})
+
+const transitionName = computed(() => `b-slide-${drawerPosition.value}`)
+
 function close() {
   emit('update:modelValue', false)
 }
 
-function onOverlayClick() {
-  close()
-}
-
-function onEscape(event: KeyboardEvent) {
-  if (event.key === 'Escape') close()
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && props.modelValue) close()
 }
 
 watch(() => props.modelValue, (isOpen) => {
-  if (isOpen) {
-    document.body.style.overflow = 'hidden'
-    document.addEventListener('keydown', onEscape)
-  } else {
-    document.body.style.overflow = ''
-    document.removeEventListener('keydown', onEscape)
-  }
+  if (!import.meta.client) return
+  document.body.style.overflow = isOpen ? 'hidden' : ''
 })
 
-onUnmounted(() => {
-  document.body.style.overflow = ''
-  document.removeEventListener('keydown', onEscape)
+onMounted(() => document.addEventListener('keydown', onKeydown))
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeydown)
+  if (import.meta.client) document.body.style.overflow = ''
 })
 </script>
 
 <template>
   <Teleport to="body">
-    <Transition
-      enter-active-class="transition duration-300 ease-out"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="transition duration-200 ease-in"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
-      <div
-        v-if="modelValue"
-        class="fixed inset-0 z-[60] bg-black/40"
-        @click.self="onOverlayClick"
-      >
-        <Transition
-          :enter-active-class="'transition duration-300 ease-out'"
-          :enter-from-class="side === 'right' ? 'translate-x-full' : '-translate-x-full'"
-          enter-to-class="translate-x-0"
-          :leave-active-class="'transition duration-200 ease-in'"
-          leave-from-class="translate-x-0"
-          :leave-to-class="side === 'right' ? 'translate-x-full' : '-translate-x-full'"
+    <div v-if="modelValue" class="fixed inset-0 z-[100]">
+      <Transition name="b-fade" appear>
+        <div v-if="modelValue" class="b-overlay" @click="close" />
+      </Transition>
+
+      <Transition :name="transitionName" appear>
+        <aside
+          v-if="modelValue"
+          class="absolute flex flex-col glass glass--strong"
+          :class="positionClass"
+          role="dialog"
+          aria-modal="true"
         >
           <div
-            v-if="modelValue"
-            class="fixed inset-y-0 z-[60] flex h-full flex-col bg-white shadow-xl"
-            :class="[
-              width,
-              side === 'right' ? 'right-0' : 'left-0',
-            ]"
+            v-if="title || closable"
+            class="flex items-center justify-between gap-4 border-b border-secondary-200 px-5 py-4"
           >
-            <div class="flex items-center justify-between border-b border-secondary-200 px-4 py-3">
-              <h2 class="text-base font-semibold text-secondary-800">
-                {{ title }}
-              </h2>
-
-              <button
-                class="flex h-8 w-8 items-center justify-center rounded-lg text-secondary-400 transition-colors hover:bg-secondary-100 hover:text-secondary-600"
-                @click="close"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="h-5 w-5"
-                >
-                  <path
-                    d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div class="flex-1 overflow-y-auto px-4 py-4">
-              <slot />
-            </div>
-
-            <div
-              v-if="$slots.footer"
-              class="border-t border-secondary-200 px-4 py-3"
+            <h2 class="store-title text-base">{{ title }}</h2>
+            <button
+              v-if="closable"
+              type="button"
+              class="flex size-8 shrink-0 items-center justify-center text-secondary-500 transition-colors hover:text-secondary-900"
+              aria-label="Закрити"
+              @click="close"
             >
-              <slot name="footer" />
-            </div>
+              <Icon name="lucide:x" class="size-5" />
+            </button>
           </div>
-        </Transition>
-      </div>
-    </Transition>
+
+          <div class="flex-1 overflow-y-auto">
+            <slot />
+          </div>
+
+          <div v-if="$slots.footer" class="border-t border-secondary-200 p-5">
+            <slot name="footer" />
+          </div>
+        </aside>
+      </Transition>
+    </div>
   </Teleport>
 </template>

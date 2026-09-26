@@ -31,7 +31,7 @@ await loadCategories()
 <template>
   <nav>
     <div class="hidden lg:block">
-      <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+      <h3 class="mb-3 text-sm font-semibold text-gray-500">
         Категорії
       </h3>
       <ul class="space-y-1">
@@ -52,14 +52,15 @@ await loadCategories()
           <div class="flex items-center">
             <NuxtLink
               :to="`/catalog/${parent.slug}`"
-              class="flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+              class="flex flex-1 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
               :class="[
                 isActive(parent.slug)
                   ? 'bg-primary-50 text-primary-700'
                   : 'text-gray-700 hover:bg-gray-100',
               ]"
             >
-              {{ parent.name }}
+              <span class="truncate">{{ parent.name }}</span>
+              <span class="shrink-0 text-xs font-normal text-gray-400">{{ parent.productCount }}</span>
             </NuxtLink>
             <button
               v-if="parent.children?.length"
@@ -82,14 +83,15 @@ await loadCategories()
             <li v-for="child in parent.children" :key="child.id">
               <NuxtLink
                 :to="`/catalog/${child.slug}`"
-                class="block rounded-lg px-3 py-1.5 text-sm transition-colors"
+                class="flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors"
                 :class="[
                   isActive(child.slug)
                     ? 'bg-primary-50 font-medium text-primary-700'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
                 ]"
               >
-                {{ child.name }}
+                <span class="truncate">{{ child.name }}</span>
+                <span class="shrink-0 text-xs text-gray-400">{{ child.productCount }}</span>
               </NuxtLink>
             </li>
           </ul>
@@ -98,7 +100,7 @@ await loadCategories()
     </div>
 
     <div class="lg:hidden">
-      <div class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 scrollbar-none">
+      <div v-drag-scroll class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 scrollbar-none">
         <NuxtLink
           to="/catalog"
           class="shrink-0 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors"

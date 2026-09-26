@@ -11,6 +11,12 @@ interface HeroSlide {
   mediaType: MediaType
   isActive: boolean
   sortOrder: number
+  focalX?: number
+  focalY?: number
+  focalXTablet?: number
+  focalYTablet?: number
+  focalXMobile?: number
+  focalYMobile?: number
   createdAt: string
   updatedAt: string
 }
@@ -21,6 +27,13 @@ interface PromoBlock {
   title: string
   isActive: boolean
   sortOrder: number
+  imageFile?: FileRecord | null
+  focalX?: number
+  focalY?: number
+  focalXTablet?: number
+  focalYTablet?: number
+  focalXMobile?: number
+  focalYMobile?: number
   products: {
     id: number
     sortOrder: number

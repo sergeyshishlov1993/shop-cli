@@ -7,9 +7,13 @@ definePageMeta({
 })
 
 const router = useRouter()
+const route = useRoute()
 
 function handleSuccess() {
-  router.push('/')
+  const requestedPath = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
+    ? route.query.redirect
+    : null
+  router.push(requestedPath ?? '/account')
 }
 </script>
 

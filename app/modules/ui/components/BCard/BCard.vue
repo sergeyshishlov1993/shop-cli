@@ -19,10 +19,10 @@ const paddingClasses: Record<NonNullable<Props['padding']>, string> = {
 }
 
 const cardClasses = computed(() => [
-  'rounded-xl bg-white',
+  'b-card',
   paddingClasses[props.padding],
-  props.border ? 'border border-secondary-200' : 'shadow-sm',
-  props.hover ? 'transition-shadow hover:shadow-md' : '',
+  props.border ? '' : 'border-transparent shadow-[0_10px_40px_-24px_rgba(16,16,16,0.45)]',
+  props.hover ? 'transition-colors hover:border-secondary-400' : '',
 ])
 </script>
 

@@ -14,51 +14,20 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const hasError = ref(false)
-
 const showImage = computed(() => props.src && !hasError.value)
 
 const initials = computed(() => {
-  if (props.fallback) {
-    return props.fallback.slice(0, 2).toUpperCase()
-  }
-
-  if (props.alt) {
-    return props.alt
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-  }
-
-  return '?'
+  if (props.fallback) return props.fallback.slice(0, 2).toUpperCase()
+  if (!props.alt) return '?'
+  return props.alt.split(' ').filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase()
 })
 
-const sizeClasses: Record<NonNullable<Props['size']>, string> = {
+const sizeClasses = {
   sm: 'size-8 text-xs',
   md: 'size-10 text-sm',
-  lg: 'size-12 text-base',
-  xl: 'size-16 text-lg',
-}
-
-const bgColors = [
-  'bg-primary-200 text-primary-800',
-  'bg-sky-200 text-sky-800',
-  'bg-amber-200 text-amber-800',
-  'bg-green-200 text-green-800',
-  'bg-violet-200 text-violet-800',
-  'bg-rose-200 text-rose-800',
-]
-
-const fallbackColor = computed(() => {
-  const source = props.fallback || props.alt || ''
-  let hash = 0
-  for (let i = 0; i < source.length; i++) {
-    hash = source.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return bgColors[Math.abs(hash) % bgColors.length]
-})
+  lg: 'size-14 text-base',
+  xl: 'size-20 text-lg',
+} as const
 
 watch(() => props.src, () => {
   hasError.value = false
@@ -67,11 +36,8 @@ watch(() => props.src, () => {
 
 <template>
   <span
-    :class="[
-      'inline-flex items-center justify-center rounded-full overflow-hidden shrink-0 font-medium select-none',
-      sizeClasses[size],
-      !showImage ? fallbackColor : '',
-    ]"
+    class="inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary-100 font-medium text-secondary-700"
+    :class="sizeClasses[size]"
   >
     <img
       v-if="showImage"
@@ -80,9 +46,6 @@ watch(() => props.src, () => {
       class="size-full object-cover"
       @error="hasError = true"
     >
-
-    <span v-else>
-      {{ initials }}
-    </span>
+    <template v-else>{{ initials }}</template>
   </span>
 </template>

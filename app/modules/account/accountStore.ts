@@ -1,7 +1,11 @@
+import { accountApi } from '~/modules/account/accountApi'
+import { useAuthStore } from '~/modules/auth/authStore'
+
 export const useAccountStore = defineStore('account', () => {
   const profile = ref<UserProfile | null>(null)
-  const orders = ref<Order[]>([])
+  const orders = ref<AccountOrderSummary[]>([])
   const ordersTotalCount = ref(0)
+  const deliveryProfiles = ref<DeliveryProfile[]>([])
   const loading = ref(false)
 
   async function fetchProfile() {
@@ -16,6 +20,17 @@ export const useAccountStore = defineStore('account', () => {
 
   async function updateProfile(dto: Parameters<typeof accountApi.updateProfile>[0]) {
     profile.value = await accountApi.updateProfile(dto)
+    useAuthStore().setUser(profile.value)
+  }
+
+  async function uploadAvatar(file: File) {
+    profile.value = await accountApi.uploadAvatar(file)
+    useAuthStore().setUser(profile.value)
+  }
+
+  async function deleteAvatar() {
+    profile.value = await accountApi.deleteAvatar()
+    useAuthStore().setUser(profile.value)
   }
 
   async function changePassword(dto: Parameters<typeof accountApi.changePassword>[0]) {
@@ -27,7 +42,7 @@ export const useAccountStore = defineStore('account', () => {
     try {
       const response = await accountApi.getOrders(query)
       orders.value = response.items
-      ordersTotalCount.value = response.totalCount
+      ordersTotalCount.value = response.meta.total
     }
     finally {
       loading.value = false
@@ -35,43 +50,37 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   async function fetchDeliveryProfiles() {
-    const profiles = await accountApi.getDeliveryProfiles()
-    if (profile.value) {
-      profile.value.deliveryProfiles = profiles
-    }
+    deliveryProfiles.value = await accountApi.getDeliveryProfiles()
   }
 
   async function createDeliveryProfile(dto: Parameters<typeof accountApi.createDeliveryProfile>[0]) {
     const created = await accountApi.createDeliveryProfile(dto)
-    if (profile.value) {
-      profile.value.deliveryProfiles.push(created)
-    }
+    deliveryProfiles.value.push(created)
     return created
   }
 
   async function updateDeliveryProfile(profileId: number, dto: Parameters<typeof accountApi.updateDeliveryProfile>[1]) {
     const updated = await accountApi.updateDeliveryProfile(profileId, dto)
-    if (profile.value) {
-      const index = profile.value.deliveryProfiles.findIndex(item => item.id === profileId)
-      if (index !== -1) profile.value.deliveryProfiles[index] = updated
-    }
+    const index = deliveryProfiles.value.findIndex(item => item.id === profileId)
+    if (index !== -1) deliveryProfiles.value[index] = updated
     return updated
   }
 
   async function deleteDeliveryProfile(profileId: number) {
     await accountApi.deleteDeliveryProfile(profileId)
-    if (profile.value) {
-      profile.value.deliveryProfiles = profile.value.deliveryProfiles.filter(item => item.id !== profileId)
-    }
+    deliveryProfiles.value = deliveryProfiles.value.filter(item => item.id !== profileId)
   }
 
   return {
     profile,
     orders,
     ordersTotalCount,
+    deliveryProfiles,
     loading,
     fetchProfile,
     updateProfile,
+    uploadAvatar,
+    deleteAvatar,
     changePassword,
     fetchOrders,
     fetchDeliveryProfiles,

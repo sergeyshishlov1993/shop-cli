@@ -1,3 +1,5 @@
+import { contentApi } from '~/modules/content/contentApi'
+
 export const useContentStore = defineStore('content', () => {
   const heroSlides = ref<HeroSlide[]>([])
   const promoBlocks = ref<PromoBlock[]>([])

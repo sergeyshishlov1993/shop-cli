@@ -1,143 +1,270 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useCatalogStore } from '~/modules/catalog/catalogStore'
+import { useSettingsStore } from '~/modules/settings/settingsStore'
+import { newsletterApi } from '~/modules/newsletter/newsletterApi'
+
+const catalogStore = useCatalogStore()
+const settingsStore = useSettingsStore()
+
+const settings = computed(() => settingsStore.settings)
+
+const nlEmail = ref('')
+const nlState = ref<'idle' | 'sent' | 'done' | 'error'>('idle')
+const nlLoading = ref(false)
+async function subscribeNewsletter() {
+  if (!nlEmail.value.trim()) return
+  nlLoading.value = true
+  try {
+    const r = await newsletterApi.subscribe(nlEmail.value.trim(), 'footer')
+    nlState.value = r.status === 'already_confirmed' ? 'done' : 'sent'
+  }
+  catch {
+    nlState.value = 'error'
+  }
+  finally {
+    nlLoading.value = false
+  }
+}
+
+const catalogLinks = computed(() => {
+  const categoryLinks = catalogStore.categories
+    .filter((category) => category.isActive && !category.parentId)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .slice(0, 5)
+    .map((category) => ({
+      label: category.name,
+      to: `/catalog/${category.slug}`,
+    }))
+
+  return [
+    { label: 'Новинки', to: '/catalog?isNew=true' },
+    { label: 'Хіти продажу', to: '/catalog?isHit=true' },
+    ...categoryLinks,
+    { label: 'Сезон', to: '/catalog?isSeasonal=true' },
+  ]
+})
+
+const companyLinks = [
+  { label: 'Про бренд', to: '/about' },
+  { label: 'Sisters Club', to: '/about' },
+  { label: 'Магазини', to: '/contacts' },
+  { label: 'Блог', to: '/about' },
+]
+
+const buyerLinks = [
+  { label: 'Доставка', to: '/delivery' },
+  { label: 'Оплата', to: '/delivery' },
+  { label: 'Вибір розміру', to: '/delivery' },
+  { label: 'Обмін та повернення', to: '/delivery' },
+  { label: 'Сертифікати', to: '/about' },
+]
+
+const contacts = computed(() => {
+  const items: { label: string, value: string, href: string, icon: string }[] = []
+
+  if (settings.value?.storePhone) {
+    items.push({
+      label: 'Телефон',
+      value: settings.value.storePhone,
+      href: `tel:${settings.value.storePhone.replace(/[^\d+]/g, '')}`,
+      icon: 'lucide:phone',
+    })
+  }
+
+  if (settings.value?.storeEmail) {
+    items.push({
+      label: 'Email',
+      value: settings.value.storeEmail,
+      href: `mailto:${settings.value.storeEmail}`,
+      icon: 'lucide:mail',
+    })
+  }
+
+  if (settings.value?.storeAddress) {
+    items.push({
+      label: 'Адреса',
+      value: settings.value.storeAddress,
+      href: `https://maps.google.com/?q=${encodeURIComponent(settings.value.storeAddress)}`,
+      icon: 'lucide:map-pin',
+    })
+  }
+
+  return items
+})
+
+const socialIconMap: Record<string, string> = {
+  instagram: 'lucide:instagram',
+  facebook: 'lucide:facebook',
+  youtube: 'lucide:youtube',
+  tiktok: 'lucide:music-2',
+  telegram: 'lucide:send',
+}
+
+const socialLinks = computed(() => {
+  return Object.entries(settings.value?.socialLinksJson ?? {})
+    .filter(([, href]) => Boolean(href))
+    .map(([name, href]) => {
+      const normalizedName = name.toLowerCase()
+
+      return {
+        name,
+        href,
+        icon: socialIconMap[normalizedName] ?? 'lucide:external-link',
+      }
+    })
+})
+
+await useAsyncData('footer-data', async () => {
+  await Promise.race([
+    Promise.allSettled([settingsStore.fetch(), catalogStore.fetchCategories()]),
+    new Promise((resolve) => setTimeout(resolve, 800)),
+  ])
+  return true
+})
+</script>
+
 <template>
-  <footer class="mt-auto border-t border-gray-200 bg-white">
-    <div class="mx-auto max-w-screen-2xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-      <div class="grid gap-10 lg:grid-cols-[1fr_1fr_1fr_1fr_1.4fr]">
-        <div class="space-y-3">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-800">
+  <footer class="store-footer mt-auto">
+    <div class="store-container py-10 lg:py-14">
+      <div class="grid gap-10 md:grid-cols-2 xl:grid-cols-[1.15fr_1fr_1fr_1fr_1.2fr]">
+        <section class="space-y-4">
+          <NuxtLink
+              to="/"
+              class="store-wordmark inline-flex text-2xl text-secondary-800"
+          >
+            STELLA
+          </NuxtLink>
+
+          <p class="max-w-sm text-sm leading-6 text-gray-600">
+            STELLA — шовкові комплекти, пеньюари, піжами та образи для нареченої. Ніжність, яку хочеться носити щодня.
+          </p>
+
+          <div class="max-w-sm">
+            <p v-if="nlState === 'sent'" class="text-sm text-gray-700">
+              Перевірте пошту — ми надіслали лист для підтвердження підписки.
+            </p>
+            <p v-else-if="nlState === 'done'" class="text-sm text-gray-700">
+              Ви вже підписані. Дякуємо!
+            </p>
+            <form v-else class="flex gap-2" @submit.prevent="subscribeNewsletter">
+              <BInput
+                v-model="nlEmail"
+                type="email"
+                required
+                placeholder="Email для новин та акцій"
+                class="min-w-0 flex-1"
+              />
+              <BBtn
+                type="submit"
+                :disabled="!nlEmail.trim()"
+                :loading="nlLoading"
+              >
+                Підписатися
+              </BBtn>
+            </form>
+            <p v-if="nlState === 'error'" class="mt-1 text-xs text-danger">Не вдалося підписатися, спробуйте пізніше.</p>
+          </div>
+
+          <div class="flex flex-wrap gap-2 text-xs font-medium text-gray-500">
+            <span class="rounded-full border border-secondary-300 px-3 py-1.5">{{ settings?.currency ?? 'UAH' }}</span>
+            <span class="rounded-full border border-secondary-300 px-3 py-1.5">Visa</span>
+            <span class="rounded-full border border-secondary-300 px-3 py-1.5">Mastercard</span>
+          </div>
+        </section>
+
+        <section class="space-y-4">
+          <h3 class="text-sm font-semibold text-gray-900">
             Центр підтримки
           </h3>
-          <div class="space-y-2 text-sm text-gray-700">
-            <NuxtLink to="/" class="block transition hover:text-black">Viber</NuxtLink>
-            <NuxtLink to="/" class="block transition hover:text-black">Telegram</NuxtLink>
-            <NuxtLink to="/" class="block transition hover:text-black">Передзвоніть мені</NuxtLink>
-            <NuxtLink to="/" class="block transition hover:text-black">Контакти</NuxtLink>
-          </div>
-        </div>
 
-        <div class="space-y-3">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-800">
+          <nav class="space-y-2 text-sm text-gray-700" aria-label="Каталог у футері">
+            <NuxtLink
+                v-for="link in [{ label: 'Telegram', to: '/contacts' }, { label: 'Передзвоніть мені', to: '/contacts' }, { label: 'Контакти', to: '/contacts' }]"
+                :key="link.to"
+                :to="link.to"
+                class="block transition hover:text-primary-600"
+            >
+              {{ link.label }}
+            </NuxtLink>
+          </nav>
+        </section>
+
+        <section class="space-y-4">
+          <h3 class="text-sm font-semibold text-gray-900">
             Про компанію
           </h3>
-          <div class="space-y-2 text-sm text-gray-700">
-            <NuxtLink to="/" class="block transition hover:text-black">Про бренд</NuxtLink>
-            <NuxtLink to="/" class="block transition hover:text-black">Sisters Club</NuxtLink>
-            <NuxtLink to="/" class="block transition hover:text-black">Магазини</NuxtLink>
-            <NuxtLink to="/" class="block transition hover:text-black">Блог</NuxtLink>
-          </div>
-        </div>
 
-        <div class="space-y-3">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-800">
+          <nav class="space-y-2 text-sm text-gray-700" aria-label="Покупцю">
+            <NuxtLink
+                v-for="link in companyLinks"
+                :key="link.to"
+                :to="link.to"
+                class="block transition hover:text-primary-600"
+            >
+              {{ link.label }}
+            </NuxtLink>
+          </nav>
+        </section>
+
+        <section class="space-y-4">
+          <h3 class="text-sm font-semibold text-gray-900">
             Покупцям
           </h3>
-          <div class="space-y-2 text-sm text-gray-700">
-            <NuxtLink to="/" class="block transition hover:text-black">Доставка</NuxtLink>
-            <NuxtLink to="/" class="block transition hover:text-black">Оплата</NuxtLink>
-            <NuxtLink to="/" class="block transition hover:text-black">Вибір розміру</NuxtLink>
-            <NuxtLink to="/" class="block transition hover:text-black">Обмін та повернення</NuxtLink>
-            <NuxtLink to="/" class="block transition hover:text-black">Сертифікати</NuxtLink>
-          </div>
-        </div>
 
-        <div class="space-y-3">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-800">
-            Категорії
-          </h3>
-          <div class="space-y-2 text-sm text-gray-700">
-            <NuxtLink to="/catalog" class="block transition hover:text-black">Новинки</NuxtLink>
-            <NuxtLink to="/catalog" class="block transition hover:text-black">Сукні</NuxtLink>
-            <NuxtLink to="/catalog" class="block transition hover:text-black">Верхній одяг</NuxtLink>
-            <NuxtLink to="/catalog" class="block transition hover:text-black">Корсети</NuxtLink>
-            <NuxtLink to="/catalog" class="block transition hover:text-black">BLACK FRIDAY</NuxtLink>
-          </div>
-        </div>
+          <nav class="space-y-2 text-sm text-gray-700" aria-label="Покупцям">
+            <NuxtLink
+                v-for="link in buyerLinks"
+                :key="link.label"
+                :to="link.to"
+                class="block transition"
+            >
+              {{ link.label }}
+            </NuxtLink>
+          </nav>
+        </section>
 
-        <div class="space-y-6">
-          <div class="space-y-3">
-            <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-800">
-              Підписатися на розсилку новин
+        <section class="space-y-5">
+          <div class="space-y-4">
+            <h3 class="text-sm font-semibold text-gray-900">
+              Категорії
             </h3>
 
-            <div>
-              <div class="flex items-center gap-3 border-b border-gray-400 pb-2">
-                <input
-                    type="email"
-                    placeholder="Введіть E-mail"
-                    class="w-full border-none bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-400"
-                >
-                <button type="button" class="shrink-0 text-gray-800 transition hover:opacity-70" aria-label="Підписатися">
-                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <path d="M5 12H19" />
-                    <path d="M13 6L19 12L13 18" />
-                  </svg>
-                </button>
-              </div>
+            <nav v-if="catalogLinks.length" class="space-y-2 text-sm text-gray-700" aria-label="Категорії у футері">
+              <NuxtLink
+                  v-for="link in catalogLinks.slice(0, 5)"
+                  :key="link.to"
+                  :to="link.to"
+                  class="block transition"
+              >
+                {{ link.label }}
+              </NuxtLink>
+            </nav>
+          </div>
 
-              <p class="mt-3 text-xs text-gray-500">
-                Наші листи знаходять шлях до тебе завдяки eSputnik
-              </p>
+          <div class="space-y-3 border-t border-gray-200 pt-5">
+            <h3 class="text-sm font-semibold text-gray-900">
+              Соціальні мережі
+            </h3>
+            <div v-if="socialLinks.length" class="flex flex-wrap gap-3">
+              <a v-for="social in socialLinks" :key="social.name" :href="social.href" class="flex h-9 w-9 items-center justify-center border border-gray-300 text-gray-800 transition" target="_blank" rel="noopener noreferrer" :aria-label="social.name">
+                <Icon :name="social.icon" class="h-4 w-4" />
+              </a>
             </div>
           </div>
-
-          <div class="flex flex-col gap-3 sm:flex-row">
-            <NuxtLink
-                to="/"
-                class="flex min-h-10 min-w-[160px] items-center justify-center rounded-md border border-gray-400 px-4 text-sm font-medium text-gray-800 transition hover:bg-gray-50"
-            >
-              Google Play
-            </NuxtLink>
-
-            <NuxtLink
-                to="/"
-                class="flex min-h-10 min-w-[160px] items-center justify-center rounded-md border border-gray-400 px-4 text-sm font-medium text-gray-800 transition hover:bg-gray-50"
-            >
-              App Store
-            </NuxtLink>
-          </div>
-
-          <div class="flex items-center gap-3">
-            <NuxtLink to="/" class="flex h-9 w-9 items-center justify-center rounded-full bg-[#4d4343] text-xs text-white transition hover:opacity-80">
-              IG
-            </NuxtLink>
-            <NuxtLink to="/" class="flex h-9 w-9 items-center justify-center rounded-full bg-[#4d4343] text-xs text-white transition hover:opacity-80">
-              FB
-            </NuxtLink>
-            <NuxtLink to="/" class="flex h-9 w-9 items-center justify-center rounded-full bg-[#4d4343] text-xs text-white transition hover:opacity-80">
-              YT
-            </NuxtLink>
-            <NuxtLink to="/" class="flex h-9 w-9 items-center justify-center rounded-full bg-[#4d4343] text-xs text-white transition hover:opacity-80">
-              P
-            </NuxtLink>
-          </div>
-        </div>
+        </section>
       </div>
     </div>
 
     <div class="border-t border-gray-200">
-      <div class="mx-auto flex max-w-screen-2xl flex-col items-center justify-between gap-3 px-4 py-4 text-center text-xs text-gray-600 sm:px-6 lg:flex-row lg:px-8">
-        <div>
-          © 2011-2026 Gepur
-        </div>
+      <div class="store-container flex flex-col gap-3 py-5 text-xs text-gray-500 lg:flex-row lg:items-center lg:justify-between">
+        <p>
+          © 2026 Stella-shop
+        </p>
 
-        <div class="flex flex-wrap items-center justify-center gap-2">
-          <NuxtLink to="/" class="transition hover:text-black">
-            Політика конфіденційності
-          </NuxtLink>
-          <span>|</span>
-          <NuxtLink to="/" class="transition hover:text-black">
-            Публічна оферта
-          </NuxtLink>
-          <span>|</span>
-          <NuxtLink to="/" class="transition hover:text-black">
-            Cookies policy
-          </NuxtLink>
-        </div>
-
-        <div class="flex items-center gap-2 text-xs text-gray-400">
-          <span>Mastercard</span>
-          <span>Visa</span>
-          <span>eSputnik</span>
-        </div>
+        <p>
+          Політика конфіденційності · Публічна оферта · Cookies policy
+        </p>
       </div>
     </div>
   </footer>

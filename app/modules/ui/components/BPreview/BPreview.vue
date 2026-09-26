@@ -19,30 +19,19 @@ const emit = defineEmits<{
 }>()
 
 const isError = ref(false)
+const isPreviewOpen = ref(false)
 
-const sizeClasses: Record<string, string> = {
-  sm: 'h-16 w-16',
-  md: 'h-24 w-24',
-  lg: 'h-36 w-36',
-}
+const sizeClasses = {
+  sm: 'size-16',
+  md: 'size-24',
+  lg: 'size-36',
+} as const
 
-const removeBtnClasses: Record<string, string> = {
-  sm: 'h-5 w-5',
-  md: 'h-6 w-6',
-  lg: 'h-7 w-7',
-}
-
-const removeIconSize: Record<string, string> = {
-  sm: '12',
-  md: '14',
-  lg: '16',
-}
-
-const fallbackIconSize: Record<string, string> = {
-  sm: '20',
-  md: '28',
-  lg: '36',
-}
+const iconSize = computed(() => {
+  if (props.size === 'lg') return 'size-8'
+  if (props.size === 'md') return 'size-6'
+  return 'size-5'
+})
 
 watch(() => props.src, () => {
   isError.value = false
@@ -51,32 +40,56 @@ watch(() => props.src, () => {
 
 <template>
   <div
-      class="group relative inline-flex shrink-0 items-center justify-center overflow-hidden border border-gray-200 bg-gray-100"
-      :class="[sizeClasses[size], rounded ? 'rounded-full' : 'rounded-lg']"
+    class="group relative inline-flex shrink-0 items-center justify-center overflow-hidden border border-secondary-200 bg-secondary-100"
+    :class="[sizeClasses[size], rounded ? 'rounded-full' : '']"
   >
-    <img
-        v-if="src && !isError"
+    <button
+      v-if="src && !isError"
+      type="button"
+      class="size-full"
+      aria-label="Переглянути зображення"
+      @click="isPreviewOpen = true"
+    >
+      <img
         :src="src"
         :alt="alt"
-        class="h-full w-full object-cover"
+        class="size-full object-cover"
         @error="isError = true"
-    >
+      >
+    </button>
 
     <Icon
-        v-else
-        name="heroicons:photo"
-        :size="fallbackIconSize[size]"
-        class="text-gray-400"
+      v-else
+      name="lucide:image"
+      class="text-secondary-400"
+      :class="iconSize"
     />
 
     <button
-        v-if="removable"
-        type="button"
-        class="absolute right-1 top-1 flex items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity hover:bg-danger group-hover:opacity-100"
-        :class="removeBtnClasses[size]"
-        @click="emit('remove')"
+      v-if="removable"
+      type="button"
+      aria-label="Прибрати зображення"
+      class="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-secondary-900/70 text-white opacity-0 transition-opacity hover:bg-danger group-hover:opacity-100"
+      @click="emit('remove')"
     >
-      <Icon name="heroicons:trash" :size="removeIconSize[size]" />
+      <Icon name="lucide:trash-2" class="size-3" />
     </button>
+
+    <Teleport to="body">
+      <Transition name="b-fade">
+        <div
+          v-if="isPreviewOpen && src"
+          class="fixed inset-0 z-[150] flex items-center justify-center p-6"
+          @click="isPreviewOpen = false"
+        >
+          <div class="b-overlay" />
+          <img
+            :src="src"
+            :alt="alt"
+            class="relative max-h-[90dvh] max-w-[90vw] object-contain"
+          >
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>

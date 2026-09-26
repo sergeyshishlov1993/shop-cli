@@ -52,6 +52,29 @@ interface UserProfile {
   lastName: string | null
   phone: string | null
   role: UserRole
+  isActive: boolean
+  personalDiscountPercent: number
   avatarFile: FileRecord | null
-  deliveryProfiles: DeliveryProfile[]
+  createdAt: string
+  updatedAt: string
+}
+
+interface AccountOrderSummary {
+  id: number
+  orderNumber: string
+  date: string
+  status: OrderStatus
+  total: number
+  itemsCount: number
+  /** Contract (returns): items with product main image; optional until backend ships it. */
+  items?: AccountOrderItemPreview[]
+}
+
+interface AccountOrderItemPreview {
+  id: number
+  productName: string
+  sizeName: string | null
+  colorName?: string | null
+  quantity: number
+  image: FileRecord | null
 }

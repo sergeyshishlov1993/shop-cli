@@ -34,7 +34,7 @@ export const authApi = {
   refresh() {
     const config = useRuntimeConfig()
     return $fetch<AuthResponse>('/auth/refresh', {
-      baseURL: config.public.apiBase,
+      baseURL: import.meta.dev ? '/api' : config.public.apiBase,
       method: 'POST',
       credentials: 'include',
     })
@@ -60,14 +60,6 @@ export const authApi = {
     return $api('/auth/reset-password', {
       method: 'POST',
       body: { token, newPassword },
-    })
-  },
-
-  googleCallback(code: string) {
-    const { $api } = useNuxtApp()
-    return $api<AuthResponse>('/auth/google/callback', {
-      method: 'POST',
-      body: { code },
     })
   },
 }

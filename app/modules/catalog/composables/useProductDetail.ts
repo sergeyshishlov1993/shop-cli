@@ -52,12 +52,24 @@ return variants.value.some(v => v.availabilityStatus === 'IN_STOCK')
 
 const media = computed<ProductMedia[]>(() => {
 const all = currentProduct.value?.media ?? []
-if (!selectedColorId.value) return all
+const hoverVideo = currentProduct.value?.hoverVideo
+const videoMedia: ProductMedia | null = hoverVideo
+? {
+id: -hoverVideo.id,
+mediaType: 'VIDEO' as const,
+isMain: true,
+sortOrder: -1,
+variantId: null,
+file: hoverVideo,
+}
+: null
+if (!selectedColorId.value) return videoMedia ? [videoMedia, ...all] : all
 const variantIds = variants.value
 .filter(v => v.color?.id === selectedColorId.value)
 .map(v => v.id)
 const filtered = all.filter(m => m.variantId && variantIds.includes(m.variantId))
-return filtered.length ? filtered : all
+const selectedMedia = filtered.length ? filtered : all
+return videoMedia ? [videoMedia, ...selectedMedia] : selectedMedia
 })
 
 function selectColor(id: number) {
@@ -75,10 +87,14 @@ watch(
 () => toValue(slug),
 async (value) => {
 if (!value) return
-await Promise.all([
-store.fetchProductBySlug(value),
-store.fetchRelated(value),
-])
+const requests: Promise<unknown>[] = []
+if (store.currentProduct?.slug !== value) {
+requests.push(store.fetchProductBySlug(value))
+}
+if (store.currentProduct?.slug !== value || !store.relatedProducts) {
+requests.push(store.fetchRelated(value))
+}
+if (requests.length) await Promise.all(requests)
 selectedColorId.value = colors.value[0]?.id ?? null
 selectedSizeId.value = null
 },

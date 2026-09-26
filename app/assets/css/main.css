@@ -1,40 +1,67 @@
 @import "tailwindcss";
+@import "./ui-kit.css";
 
 @theme {
-    --color-primary-50: #fff0f5;
-    --color-primary-100: #ffe2ea;
-    --color-primary-200: #f9cfdc;
-    --color-primary-300: #f0b9ca;
-    --color-primary-400: #e6a0b6;
-    --color-primary-500: #db86a3;
-    --color-primary-600: #c26e89;
-    --color-primary-700: #a0586f;
-    --color-primary-800: #7c4355;
-    --color-primary-900: #58303c;
+    /* Акцент — графітова шкала (монохромний преміум-стиль вітрини) */
+    --color-primary-50: #fcf6f4;
+    --color-primary-100: #f7e9e5;
+    --color-primary-200: #f3e3df;
+    --color-primary-300: #e8c6bf;
+    --color-primary-400: #dfb5ad;
+    --color-primary-500: #d8a7a0;
+    --color-primary-600: #c48a82;
+    --color-primary-700: #a8665f;
+    --color-primary-800: #86504a;
+    --color-primary-900: #5e3834;
+    --color-primary-950: #3d2422;
 
-    --color-secondary-50: #ffffff;
-    --color-secondary-100: #f7f7f7;
-    --color-secondary-200: #eaeaea;
-    --color-secondary-300: #d6d6d6;
-    --color-secondary-400: #b5b5b5;
-    --color-secondary-500: #8f8f8f;
-    --color-secondary-600: #6b6b6b;
-    --color-secondary-700: #4a4a4a;
-    --color-secondary-800: #2f2f2f;
-    --color-secondary-900: #1a1a1a;
+    /* Нейтральна (тепло-сіра) шкала */
+    --color-secondary-50: #fbf6f3;
+    --color-secondary-100: #f5ede8;
+    --color-secondary-200: #ebe0da;
+    --color-secondary-300: #d9ccc5;
+    --color-secondary-400: #b5a7a0;
+    --color-secondary-500: #8c7f79;
+    --color-secondary-600: #6b605b;
+    --color-secondary-700: #4d4441;
+    --color-secondary-800: #3a3230;
+    --color-secondary-900: #221c1b;
+    --color-secondary-950: #161211;
 
-    --color-success: #7ec89a;
-    --color-warning: #ecc06a;
-    --color-danger: #e88080;
-    --color-info: #88c4d8;
+    --color-success: #5f8a6b;
+    --color-warning: #c08a3e;
+    --color-danger: #b5484a;
+    --color-info: #8a7a9e;
 
-    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-sans: "Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-display: "Cormorant Garamond", "Times New Roman", ui-serif, Georgia, serif;
+
+    /* Мʼякі невеликі скруглення */
+    --radius-xs: 2px;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-2xl: 12px;
+    --radius-3xl: 16px;
+    --radius-4xl: 24px;
 
     --breakpoint-xs: 375px;
     --breakpoint-sm: 640px;
     --breakpoint-md: 768px;
     --breakpoint-lg: 1024px;
     --breakpoint-xl: 1280px;
+}
+
+/* Поверхня (картки, поля, шапка). У темній темі перевизначається нижче. */
+:root {
+    /* Поверхня бере колір «Фон блоків» з теми адмінки */
+    --surface: var(--store-surface, #fff);
+    --glass-bg: rgb(255 255 255 / 0.4);
+    --glass-border: rgb(255 255 255 / 0.55);
+    --glass-highlight: rgb(255 255 255 / 0.7);
+    --glass-shadow: 0 8px 32px rgb(58 50 48 / 0.12);
+    color-scheme: light;
 }
 
 @layer base {
@@ -53,8 +80,8 @@
 
     body {
         font-family: var(--font-sans);
-        color: var(--color-secondary-800);
-        background-color: var(--color-primary-50);
+        color: var(--store-text, var(--color-secondary-900));
+        background-color: var(--store-background, var(--surface));
         line-height: 1.5;
         min-height: 100dvh;
     }
@@ -95,8 +122,8 @@
     }
 
     option {
-        background-color: white;
-        color: #111827;
+        background-color: var(--surface);
+        color: var(--color-secondary-900);
     }
 
     ul,
@@ -113,4 +140,813 @@
         font-size: inherit;
         font-weight: inherit;
     }
+
+    /* Фокус із клавіатури — пудрове кільце замість синьої рамки браузера; мишею — без рамки */
+    :focus {
+        outline: none;
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--color-primary-400);
+        outline-offset: 2px;
+    }
+
+    ::selection {
+        background: var(--color-primary-300);
+        color: var(--color-secondary-900);
+    }
+}
+
+@layer components {
+    /* Єдина сітка вітрини: однакова ширина і поля для шапки, сторінок і футера */
+    .store-container {
+        width: 100%;
+        max-width: 90rem;
+        margin-inline: auto;
+        padding-inline: 1rem;
+    }
+
+    @media (min-width: 640px) {
+        .store-container {
+            padding-inline: 1.5rem;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .store-container {
+            padding-inline: 2rem;
+        }
+    }
+
+    /* Типографіка вітрини */
+    .store-eyebrow {
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--color-primary-700);
+    }
+
+    .store-title {
+        font-family: var(--font-display);
+        font-weight: 400;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        line-height: 1.1;
+        color: var(--color-secondary-900);
+    }
+
+    .store-wordmark {
+        font-family: var(--font-display);
+        font-weight: 500;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+    }
+
+    .store-link {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    .store-link::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -0.25rem;
+        height: 1px;
+        background: currentColor;
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.35s ease;
+    }
+
+    .store-link:hover::after {
+        transform: scaleX(1);
+    }
+
+    .scrollbar-none {
+        scrollbar-width: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
+
+    .catalog-sidebar-scroll {
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-secondary-400) var(--color-secondary-100);
+        overflow-x: hidden;
+    }
+
+    .catalog-sidebar-scroll::-webkit-scrollbar {
+        width: 0.375rem;
+    }
+
+    .catalog-sidebar-scroll::-webkit-scrollbar-track {
+        background: var(--color-secondary-100);
+    }
+
+    .catalog-sidebar-scroll::-webkit-scrollbar-thumb {
+        background: var(--color-secondary-400);
+    }
+
+    .catalog-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+        background: var(--color-secondary-600);
+    }
+
+    .catalog-filter-values {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        padding-bottom: 0.75rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        cursor: grab;
+        user-select: none;
+        touch-action: pan-y;
+    }
+
+    .catalog-filter-values.is-dragging {
+        cursor: grabbing;
+    }
+
+    .catalog-filter-values::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Gepur-style storefront shell. Keep the admin layout outside this scope. */
+    .storefront-shell {
+        --store-header-background: var(--store-surface, var(--surface));
+        background: var(--store-background, var(--surface));
+    }
+
+    .store-header {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        color: var(--color-secondary-800);
+        background: var(--store-header-background);
+        border-bottom: 1px solid var(--color-secondary-200);
+    }
+
+    .store-header--overlay {
+        position: absolute;
+        inset: 0 0 auto;
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        border-bottom: 0;
+        color: #fff;
+    }
+
+    .store-header__bar {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        min-height: 3.5rem;
+    }
+
+    .store-header__menu,
+    .store-header__icon,
+    .store-header__search-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        transition: opacity 0.25s ease;
+    }
+
+    .store-header__menu {
+        justify-self: start;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.34rem;
+        width: 2rem;
+        height: 2rem;
+    }
+
+    .store-header__menu span {
+        display: block;
+        width: 1.35rem;
+        height: 1px;
+        background: currentColor;
+    }
+
+    .store-header__actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.35rem;
+    }
+
+    .store-header__icon :deep(svg),
+    .store-header__search-close :deep(svg) {
+        width: 1.3rem;
+        height: 1.3rem;
+        stroke-width: 1.3;
+    }
+
+    .store-header__icon:hover,
+    .store-header__menu:hover,
+    .store-header__search-close:hover {
+        opacity: 0.55;
+    }
+
+    .store-logo {
+        font-family: var(--font-display);
+        font-size: 1.625rem;
+        font-weight: 500;
+        letter-spacing: 0.3em;
+        line-height: 1;
+    }
+
+    .store-header__cart-count {
+        background: var(--color-primary-500);
+        color: #fff;
+    }
+
+    /* Лічильник кошика над фото: завжди пудровий з білою цифрою (раніше в темній темі був темний на темному) */
+    .store-header--overlay .store-header__cart-count {
+        background: var(--color-primary-500);
+        color: #fff;
+    }
+
+    .store-header__search {
+        border-top: 1px solid var(--color-secondary-200);
+        background: var(--store-header-background);
+        color: var(--color-secondary-800);
+    }
+
+    .store-header--overlay .store-header__search {
+        border-top-color: rgba(255, 255, 255, 0.35);
+    }
+
+    .store-header__search-inner {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding-block: 0.75rem;
+    }
+
+    .store-header__search-close {
+        flex: none;
+    }
+
+    .store-header__search .catalog-search--compact .b-input {
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .store-header__search .catalog-search--compact .b-input:focus {
+        border: 0;
+    }
+
+    .catalog-search--compact .b-input,
+    .b-input--search {
+        border-color: transparent;
+        background: var(--store-header-background, var(--surface));
+        box-shadow: none;
+    }
+
+    .catalog-search--compact .b-input:focus,
+    .b-input--search:focus {
+        border-color: transparent;
+        box-shadow: none;
+    }
+
+    .store-page {
+        background: var(--store-background, var(--surface));
+    }
+
+    .store-page h1,
+    .store-page h2,
+    .store-page h3 {
+        letter-spacing: 0.01em;
+    }
+
+    .store-title {
+        font-family: var(--font-display);
+        font-weight: 400;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .home-page {
+        background: var(--store-background, var(--surface));
+    }
+
+    .store-announce {
+        background: var(--color-primary-200);
+        color: var(--color-secondary-800);
+        font-size: 0.6875rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        text-align: center;
+        padding: 0.35rem 1rem;
+    }
+
+    .store-header--overlay .store-announce {
+        background: rgb(255 255 255 / 0.18);
+        color: #fff;
+    }
+
+    .store-nav {
+        display: flex;
+        justify-content: center;
+        gap: 2.25rem;
+        padding-bottom: 0.6rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    .store-nav a {
+        position: relative;
+        padding-bottom: 0.25rem;
+    }
+
+    .store-nav a::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: currentColor;
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .store-nav a:hover::after {
+        transform: scaleX(1);
+    }
+
+    .store-nav a.is-sale {
+        color: var(--color-primary-700);
+    }
+
+    .store-header--overlay .store-nav a.is-sale {
+        color: #fff;
+    }
+
+    .home-tile {
+        position: relative;
+        display: block;
+        overflow: hidden;
+        aspect-ratio: 3 / 4;
+        background: var(--color-primary-100);
+    }
+
+    .home-tile img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.8s ease;
+    }
+
+    .home-tile:hover img {
+        transform: scale(1.05);
+    }
+
+    .home-tile__label {
+        position: absolute;
+        inset: auto 0 0;
+        padding: 2rem 0.5rem 0.75rem;
+        color: #fff;
+        text-align: center;
+        font-family: var(--font-display);
+        font-size: 1.125rem;
+        line-height: 1.15;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        background: linear-gradient(transparent, rgb(58 50 48 / 0.55));
+    }
+
+    .home-hero {
+        min-height: min(46rem, 100svh);
+    }
+
+    /* Стрічка товарів: одна строка, 5 карток у видимій зоні, решта — гортанням */
+    .home-product-rail {
+        display: flex;
+        gap: 1.25rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+    }
+
+    .home-product-rail::-webkit-scrollbar {
+        display: none;
+    }
+
+    .home-product-rail > * {
+        flex: 0 0 calc((100% - 4 * 1.25rem) / 5);
+        min-width: 0;
+        scroll-snap-align: start;
+    }
+
+    .home-promo {
+        position: relative;
+        min-height: min(32rem, 65svh);
+        overflow: hidden;
+        background: var(--color-secondary-100);
+    }
+
+    .home-promo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .home-promo__overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: flex-end;
+        padding: 1.5rem;
+        color: #fff;
+        background: linear-gradient(transparent 45%, rgba(0, 0, 0, 0.6));
+    }
+
+    .store-footer {
+        border-top: 1px solid var(--color-secondary-200);
+        background: var(--color-secondary-100);
+    }
+
+    /* Футер: контрастніший текст у обох темах (сірі класи в шаблоні — надто бліді) */
+    .store-footer {
+        color: var(--color-secondary-800);
+    }
+
+    .store-footer :is(.text-gray-500, .text-gray-600, .text-gray-700) {
+        color: var(--color-secondary-700);
+    }
+
+    .store-footer :is(h3, .text-gray-900) {
+        color: var(--color-secondary-900);
+        font-size: 0.8125rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    .store-footer a {
+        color: var(--color-secondary-800);
+        transition: color 0.2s ease;
+    }
+
+    .store-footer a:hover {
+        color: var(--color-primary-700);
+    }
+
+    @media (max-width: 767px) {
+        .store-header__bar {
+            min-height: 4rem;
+        }
+
+        .store-logo {
+            font-size: 1.5rem;
+        }
+
+        .store-header__actions {
+            gap: 0;
+        }
+
+        .store-header__icon {
+            width: 2.15rem;
+            height: 2.15rem;
+        }
+
+        .store-header__search-inner {
+            padding-block: 0.5rem;
+        }
+
+        /* Мобільна головна в стилі Gepur: вузькі картки з «підглядом» наступної */
+        .home-hero,
+        .home-hero__inner {
+            min-height: 27rem;
+        }
+
+        .home-product-rail {
+            display: flex;
+            gap: 0.125rem;
+            overflow-x: auto;
+            margin-inline: -1rem;
+            padding-inline: 0.5rem;
+            scroll-padding-inline: 0.5rem;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+        }
+
+        .home-product-rail::-webkit-scrollbar {
+            display: none;
+        }
+
+        .home-product-rail > * {
+            flex: 0 0 10rem;
+            scroll-snap-align: start;
+        }
+
+        .home-promo {
+            min-height: 29rem;
+        }
+
+        .store-announce {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            font-size: 0.625rem;
+            letter-spacing: 0.1em;
+        }
+
+        .home-page .store-eyebrow {
+            display: none;
+        }
+
+        .home-page h2.store-title {
+            font-family: var(--font-sans);
+            font-weight: 500;
+            letter-spacing: 0;
+            text-transform: none;
+        }
+
+        .home-promo__overlay {
+            padding: 1rem;
+        }
+    }
+}
+
+/* Keep the header search field visually integrated with the header. */
+.storefront-shell .catalog-search--compact .b-input,
+.storefront-shell .b-input--search {
+    border: 0 !important;
+    border-color: transparent !important;
+    background: var(--store-header-background, var(--surface)) !important;
+    box-shadow: none !important;
+}
+
+.storefront-shell .catalog-search--compact .b-input:focus,
+.storefront-shell .b-input--search:focus {
+    border: 0 !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Рядок пошуку над фото на головній — щільна скляна панель, щоб було зрозуміло, що це поле пошуку */
+.store-header--overlay .store-header__search {
+    background: color-mix(in srgb, var(--surface) 88%, transparent) !important;
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    color: var(--color-secondary-800) !important;
+}
+
+.store-header--overlay .catalog-search--compact .b-input,
+.store-header--overlay .b-input--search {
+    background: transparent !important;
+    color: var(--color-secondary-900) !important;
+}
+
+.store-header--overlay .catalog-search--compact .b-input::placeholder,
+.store-header--overlay .b-input--search::placeholder {
+    color: var(--color-secondary-500) !important;
+}
+
+/* Адмінка у стилі Stella: сірі Tailwind-кольори → тепла графітова шкала, темні кнопки → пудровий акцент.
+   Статусні кольори (emerald/red/amber/blue) не чіпаємо — вони несуть зміст. */
+.admin-shell {
+    --color-gray-50: var(--color-secondary-50);
+    --color-gray-100: var(--color-secondary-100);
+    --color-gray-200: var(--color-secondary-200);
+    --color-gray-300: var(--color-secondary-300);
+    --color-gray-400: var(--color-secondary-400);
+    --color-gray-500: var(--color-secondary-500);
+    --color-gray-600: var(--color-secondary-600);
+    --color-gray-700: var(--color-secondary-700);
+    --color-gray-800: var(--color-secondary-800);
+    --color-gray-900: var(--color-secondary-900);
+    --color-gray-950: var(--color-secondary-900);
+    color: var(--color-secondary-800);
+}
+
+.admin-shell .bg-gray-950,
+.admin-shell .bg-gray-800 {
+    background-color: var(--color-primary-700);
+}
+
+.admin-shell .hover\:bg-gray-800:hover {
+    background-color: var(--color-primary-800);
+}
+
+/* ---------- Темна тема ----------
+   Вмикається атрибутом data-theme="dark" на <html> (useColorMode, за замовчуванням — як у системі).
+   Тепла шкала перевертається, пудровий акцент лишається. Сірі Tailwind-кольори та bg-white
+   перенаправлені, щоб не правити сотні класів у шаблонах. */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface: #2a272b;
+    --glass-bg: rgb(42 39 43 / 0.42);
+    --glass-border: rgb(255 235 238 / 0.1);
+    --glass-highlight: rgb(255 240 242 / 0.14);
+    --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.35);
+
+    --color-secondary-50: #1f1d20 !important;
+    --color-secondary-100: #2a272b !important;
+    --color-secondary-200: #3a3539 !important;
+    --color-secondary-300: #4d474b !important;
+    --color-secondary-400: #756d71 !important;
+    --color-secondary-500: #a79ea2 !important;
+    --color-secondary-600: #c3babd !important;
+    --color-secondary-700: #d9d0d2 !important;
+    --color-secondary-800: #eae1e3 !important;
+    --color-secondary-900: #f1e9ea !important;
+    --color-secondary-950: #faf5f6 !important;
+
+    --color-gray-50: var(--color-secondary-50);
+    --color-gray-100: var(--color-secondary-100);
+    --color-gray-200: var(--color-secondary-200);
+    --color-gray-300: var(--color-secondary-300);
+    --color-gray-400: var(--color-secondary-400);
+    --color-gray-500: var(--color-secondary-500);
+    --color-gray-600: var(--color-secondary-600);
+    --color-gray-700: var(--color-secondary-700);
+    --color-gray-800: var(--color-secondary-800);
+    --color-gray-900: var(--color-secondary-900);
+    --color-gray-950: var(--color-secondary-950);
+}
+
+/* Тема з адмінки задається інлайном на .store-theme — у темному режимі її світлі кольори підміняємо. */
+:root[data-theme="dark"] {
+    --store-background: #1f1d20 !important;
+    --store-surface: #2a272b !important;
+    --store-text: #eae1e3 !important;
+    /* Відтінки акценту в темній темі рахуються від кольору теми з адмінки (--theme-primary), а не фіксовані */
+    --color-primary-50: color-mix(in srgb, var(--theme-primary, #d8a7a0) 10%, #1f1d20) !important;
+    --color-primary-100: color-mix(in srgb, var(--theme-primary, #d8a7a0) 18%, #1f1d20) !important;
+    --color-primary-200: color-mix(in srgb, var(--theme-primary, #d8a7a0) 28%, #1f1d20) !important;
+    --color-primary-300: var(--theme-primary-on-dark, #d8a7a0) !important;
+    --color-primary-400: var(--theme-primary-on-dark, #d8a7a0) !important;
+    --color-primary-500: var(--theme-primary-on-dark, #d8a7a0) !important;
+    --color-primary-600: var(--theme-primary-on-dark, #d8a7a0) !important;
+    --color-primary-700: color-mix(in srgb, var(--theme-primary, #d8a7a0) 75%, #fff) !important;
+    --color-primary-800: color-mix(in srgb, var(--theme-primary, #d8a7a0) 60%, #fff) !important;
+}
+
+:root[data-theme="dark"] .bg-white,
+:root[data-theme="dark"] .bg-white\/90,
+:root[data-theme="dark"] .bg-white\/95,
+:root[data-theme="dark"] .bg-white\/70,
+:root[data-theme="dark"] .bg-white\/60,
+:root[data-theme="dark"] .bg-white\/55 {
+    background-color: var(--surface);
+}
+
+:root[data-theme="dark"] .product-gallery__main swiper-container,
+:root[data-theme="dark"] .store-announce {
+    background-color: var(--color-primary-200);
+}
+
+
+/* ---------- Рідке скло ----------
+   Напівпрозорий фон + розмиття з насиченням, світлий відблиск по верхньому краю і м'яка тінь. */
+.glass {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(28px) saturate(170%);
+    backdrop-filter: blur(28px) saturate(170%);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-highlight), var(--glass-shadow);
+}
+
+/* Меню, списки, модалки: рівне щільне скло без відблиску і кольорового «перетікання» фону */
+.glass.glass--strong {
+    --glass-bg: color-mix(in srgb, var(--surface) 92%, transparent);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--glass-shadow);
+}
+
+.store-header:not(.store-header--overlay) {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-bottom-color: var(--glass-border);
+    box-shadow: inset 0 -1px 0 var(--glass-highlight);
+}
+
+/* bg-secondary-950 у шаблонах — це «темна плашка з білим текстом»; у темній темі шкала перевернута, тож лишаємо її темною. */
+:root[data-theme="dark"] .bg-secondary-950,
+:root[data-theme="dark"] .hover\:bg-secondary-950:hover {
+    background-color: #151316;
+}
+
+/* Кадрування банерів: окрема точка фокуса для телефона / планшета / десктопа (див. focalVars) */
+.focal-media {
+    object-position: var(--focal-mobile, 50% 50%);
+}
+
+@media (min-width: 768px) {
+    .focal-media {
+        object-position: var(--focal-tablet, 50% 50%);
+    }
+}
+
+@media (min-width: 1024px) {
+    .focal-media {
+        object-position: var(--focal-desktop, 50% 50%);
+    }
+}
+
+/* Дозавантаження контенту: вміст розмивається, поки приходять нові дані.
+   Використання: контейнер з aria-busy="true" + дочірній елемент із класом .loading-blur (або сам елемент). */
+.loading-blur {
+    transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+[aria-busy="true"] .loading-blur,
+.loading-blur[aria-busy="true"] {
+    filter: blur(6px);
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+/* ---------- Адмінка на телефоні: таблиці → картки ----------
+   <table class="admin-table">, у кожному <td data-label="Назва поля">; комірка з кнопками — <td class="admin-table__actions">.
+   На ≥1024px — звичайна таблиця. */
+@media (max-width: 1023px) {
+    .admin-table,
+    .admin-table tbody {
+        display: block;
+        width: 100%;
+        min-width: 0 !important;
+    }
+
+    .admin-table thead {
+        display: none;
+    }
+
+    .admin-table tr {
+        display: block;
+        margin-bottom: 0.75rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--color-secondary-200);
+        border-radius: 0.75rem;
+        background: var(--surface);
+    }
+
+    .admin-table td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.375rem 0 !important;
+        border: 0 !important;
+        text-align: right;
+    }
+
+    .admin-table td[data-label]::before {
+        content: attr(data-label);
+        flex: none;
+        color: var(--color-secondary-500);
+        font-size: 0.75rem;
+        text-align: left;
+    }
+
+    .admin-table td.admin-table__actions {
+        justify-content: flex-end;
+        margin-top: 0.25rem;
+        padding-top: 0.625rem !important;
+        border-top: 1px solid var(--color-secondary-200) !important;
+    }
+}
+
+/* Діалоги адмінки на телефоні — на весь екран, кнопки форми (останній рядок) закріплені знизу */
+@media (max-width: 639px) {
+    .admin-dialog form > :last-child:has(button[type="submit"]) {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        margin: 0 -1.25rem -1.25rem;
+        padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom));
+        background: var(--surface);
+        border-top: 1px solid var(--color-secondary-200);
+    }
+}
+
+/* Заголовки-посилання: на ховері пудровий колір (у всьому застосунку) */
+:is(h1, h2, h3, h4) a {
+    transition: color 0.2s ease;
+}
+
+:is(h1, h2, h3, h4) a:hover {
+    color: var(--color-primary-700);
 }

@@ -1,3 +1,5 @@
+import { feedbackApi } from '~/modules/feedback/feedbackApi'
+
 export const useFeedbackStore = defineStore('feedback', () => {
   const sending = ref(false)
   const sent = ref(false)

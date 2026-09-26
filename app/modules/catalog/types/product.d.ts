@@ -45,7 +45,10 @@ interface ProductMedia {
     isMain: boolean
     sortOrder: number
     variantId: number | null
-    file: ProductMediaFile
+    focalX?: number
+    focalY?: number
+    externalUrl?: string | null
+    file: ProductMediaFile | null
 }
 
 
@@ -88,6 +91,7 @@ interface ProductListItem {
   availabilityStatus: Exclude<AvailabilityStatus, 'OUT_OF_STOCK'>
   mainImage: ProductCardImage | null
   hoverImage: ProductCardImage | null
+  hoverVideo?: ProductMediaFile | null
   averageRating: number | null
   reviewCount: number
 }
@@ -110,6 +114,7 @@ interface ProductDetail {
     media: ProductMedia[]
     hoverVideo: ProductMediaFile | null
     variants: StorefrontVariant[]
+    outOfStock: boolean
     seo: {
         metaTitle: string | null
         metaDescription: string | null
@@ -138,3 +143,11 @@ interface RelatedProducts {
   similar: ProductListItem[]
 }
 
+interface SizeChart {
+  id: number
+  categoryId: number
+  columns: string[]
+  rows: string[][]
+  createdAt: string
+  updatedAt: string
+}

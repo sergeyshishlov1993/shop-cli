@@ -6,8 +6,8 @@ interface UsePhoneMaskReturn {
 }
 
 export function usePhoneMask(): UsePhoneMaskReturn {
-  const template = '+38 (0__) ___-__-__'
-  const digitSlots = [6, 7, 10, 11, 12, 14, 15, 17, 18]
+  const template = '+380 __ ___ __ __'
+  const digitSlots = [5, 6, 8, 9, 10, 12, 13, 15, 16]
 
   function extractDigits(value: string): string {
     const raw = value.replace(/\D/g, '')
@@ -18,15 +18,18 @@ export function usePhoneMask(): UsePhoneMaskReturn {
   }
 
   function format(value: string): string {
+    const raw = value.replace(/\D/g, '')
     const digits = extractDigits(value)
-    if (!digits.length) return ''
+    if (!digits.length) {
+      return raw === '380' || value.trim().startsWith('+380') ? '+380 ' : ''
+    }
 
     const chars = template.split('')
     let digitIndex = 0
 
     for (const slot of digitSlots) {
       if (digitIndex < digits.length) {
-        chars[slot] = digits[digitIndex]
+        chars[slot] = digits[digitIndex] ?? '_'
         digitIndex++
       } else {
         chars[slot] = '_'
@@ -38,7 +41,7 @@ export function usePhoneMask(): UsePhoneMaskReturn {
       return chars.slice(0, lastFilledSlot + 1).join('')
     }
 
-    return '+38 (0'
+    return '+380 '
   }
 
   function unmask(value: string): string {
@@ -75,7 +78,7 @@ export function usePhoneMask(): UsePhoneMaskReturn {
         const formatted = newDigits.length ? format(newDigits) : ''
         input.value = formatted
 
-        const nextSlot = newDigits.length < digitSlots.length ? digitSlots[newDigits.length] : formatted.length
+        const nextSlot = newDigits.length < digitSlots.length ? (digitSlots[newDigits.length] ?? formatted.length) : formatted.length
         input.setSelectionRange(nextSlot, nextSlot)
         input.dispatchEvent(new Event('input', { bubbles: true }))
       }

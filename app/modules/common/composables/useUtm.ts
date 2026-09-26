@@ -81,7 +81,7 @@ export function useUtm() {
   }
 }
 
-function getQueryValue(value: string | string[] | undefined): string | null {
+function getQueryValue(value: string | null | (string | null)[] | undefined): string | null {
   if (Array.isArray(value)) {
     return value[0] ?? null
   }

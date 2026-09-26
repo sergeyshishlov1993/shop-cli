@@ -1,3 +1,5 @@
+import { orderApi } from '~/modules/order/orderApi'
+
 export const useOrderStore = defineStore('order', () => {
   const lastOrder = ref<Order | null>(null)
   const creating = ref(false)

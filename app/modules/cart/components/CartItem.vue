@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { CartItem } from '~/modules/cart/types/cart'
 import {useCartStore} from '~/modules/cart/cartStore'
+import { useConfirm } from '~/modules/ui/composables/useConfirm'
 
 interface Props {
   item: CartItem
@@ -9,6 +10,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const cartStore = useCartStore()
+const { confirm } = useConfirm()
 
 const imageUrl = computed(() => getFileUrl(props.item.variant.mainImage, 'thumb'))
 
@@ -39,6 +41,7 @@ async function decrease() {
 }
 
 async function remove() {
+  if (!(await confirm({ title: 'Видалити товар з кошика?', message: 'Цю дію не можна скасувати.', variant: 'danger', confirmText: 'Видалити' }))) return
   isRemoving.value = true
   try {
     await cartStore.removeFromCart(props.item.id)
@@ -51,7 +54,7 @@ async function remove() {
 <template>
   <div class="flex gap-3">
     <NuxtLink :to="productLink" class="shrink-0">
-      <div class="h-20 w-16 overflow-hidden rounded-lg bg-gray-100">
+      <div class="h-[120px] w-20 overflow-hidden bg-secondary-100 lg:h-[180px] lg:w-[120px]">
         <img
             v-if="imageUrl"
             :src="imageUrl"
@@ -62,51 +65,51 @@ async function remove() {
       </div>
     </NuxtLink>
 
-    <div class="flex flex-1 flex-col gap-1.5">
+    <div class="flex min-w-0 flex-1 flex-col gap-1">
       <div class="flex items-start justify-between gap-2">
-        <NuxtLink :to="productLink" class="text-sm font-medium text-gray-900 line-clamp-2 hover:text-primary-600 transition-colors">
+        <NuxtLink :to="productLink" class="min-w-0 truncate text-sm text-secondary-800 transition-colors hover:text-primary-700 lg:text-base">
           {{ item.product.name }}
         </NuxtLink>
-
         <button
-            class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            type="button"
+            class="flex size-7 shrink-0 items-center justify-center text-secondary-400 transition-colors hover:text-secondary-800"
+            aria-label="Видалити з кошика"
             :disabled="isRemoving"
             @click="remove"
         >
-          <Icon name="mdi:close" class="h-4 w-4" />
+          <Icon name="lucide:trash-2" size="18" />
         </button>
       </div>
 
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
-        <span v-if="item.variant.color">{{ item.variant.color.name }}</span>
-        <span v-if="item.variant.size">{{ item.variant.size.name }}</span>
-        <span v-if="item.product.brand">{{ item.product.brand }}</span>
-      </div>
+      <span class="text-sm font-semibold text-secondary-900">{{ formatPrice(item.currentUnitPrice) }}</span>
 
-      <div class="mt-auto flex items-center justify-between">
-        <div class="flex items-center gap-1.5">
+      <p class="truncate text-xs text-secondary-500">
+        {{ [item.variant.color?.name, item.variant.size?.name, item.product.brand].filter(Boolean).join(' • ') }}
+      </p>
+
+      <div class="mt-auto flex items-center justify-between pt-1">
+        <div class="flex items-center gap-1">
           <button
-              class="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-40"
+              type="button"
+              class="flex size-8 items-center justify-center text-secondary-800 transition-opacity disabled:opacity-30"
+              aria-label="Менше"
               :disabled="!canDecrease || isUpdating"
               @click="decrease"
           >
-            <Icon name="mdi:minus" class="h-3.5 w-3.5" />
+            <Icon name="lucide:minus" size="16" />
           </button>
-
-          <span class="w-6 text-center text-sm font-medium text-gray-900">
-            {{ item.quantity }}
-          </span>
-
+          <span class="w-6 text-center text-sm text-secondary-900">{{ item.quantity }}</span>
           <button
-              class="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-40"
+              type="button"
+              class="flex size-8 items-center justify-center text-secondary-800 transition-opacity disabled:opacity-30"
+              aria-label="Більше"
               :disabled="!canIncrease || isUpdating"
               @click="increase"
           >
-            <Icon name="mdi:plus" class="h-3.5 w-3.5" />
+            <Icon name="lucide:plus" size="16" />
           </button>
         </div>
-
-        <span class="text-sm font-semibold text-gray-900">
+        <span v-if="item.quantity > 1" class="text-sm font-semibold text-secondary-900">
           {{ formatPrice(item.lineTotal) }}
         </span>
       </div>

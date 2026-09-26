@@ -3,7 +3,7 @@ interface ConfirmOptions {
   message: string
   confirmText?: string
   cancelText?: string
-  variant?: 'primary' | 'danger'
+  variant?: 'primary' | 'danger' | 'warning'
 }
 
 interface ConfirmState {

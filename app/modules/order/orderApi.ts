@@ -7,8 +7,15 @@ interface CreateOrderDto {
   warehouse?: string
   addressLine?: string
   postalCode?: string
-  deliveryComment?: string
+  comment?: string
   deliveryProfileId?: number
+  utmSource?: string | null
+  utmMedium?: string | null
+  utmCampaign?: string | null
+  utmContent?: string | null
+  utmTerm?: string | null
+  referer?: string | null
+  couponCode?: string
 }
 
 export const orderApi = {

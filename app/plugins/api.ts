@@ -1,47 +1,104 @@
-let accessToken: string | null = null
+import { useAuthStore } from '~/modules/auth/authStore'
+
+const ACCESS_TOKEN_COOKIE = 'shop_access_token'
+let clientAccessToken: string | null = null
+let clientAccessTokenCookie: ReturnType<typeof useAccessTokenCookie> | null = null
+
+function useAccessTokenCookie() {
+  return useCookie<string | null>(ACCESS_TOKEN_COOKIE, {
+    default: () => null,
+    maxAge: 15 * 60,
+    path: '/',
+    sameSite: 'lax',
+    secure: import.meta.env.PROD,
+  })
+}
 
 export function getAccessToken(): string | null {
-  return accessToken
+  if (import.meta.client) {
+    return clientAccessToken ?? clientAccessTokenCookie?.value ?? null
+  }
+
+  return useAccessTokenCookie().value
 }
 
 export function setAccessToken(token: string | null): void {
-  accessToken = token
+  if (import.meta.client) {
+    clientAccessToken = token
+    if (clientAccessTokenCookie) {
+      clientAccessTokenCookie.value = token
+    }
+    return
+  }
+
+  useAccessTokenCookie().value = token
 }
 
-export default defineNuxtPlugin(() => {
+export default defineNuxtPlugin((nuxtApp) => {
   const config = useRuntimeConfig()
+  const accessTokenCookie = useAccessTokenCookie()
+  const apiBase = import.meta.dev ? '/api' : config.public.apiBase
   let refreshPromise: Promise<string | null> | null = null
+  // На SSR $fetch не бачить cookie браузера — прокидуємо їх, інакше бек не впізнає сесію (кошик гостя тощо).
+  const ssrCookie = import.meta.server ? useRequestHeaders(['cookie']).cookie : undefined
+
+  if (import.meta.client) {
+    clientAccessTokenCookie = accessTokenCookie
+    clientAccessToken ??= accessTokenCookie.value
+  }
+
+  function readAccessToken(): string | null {
+    return import.meta.client
+      ? clientAccessToken ?? accessTokenCookie.value
+      : accessTokenCookie.value
+  }
+
+  function writeAccessToken(token: string | null): void {
+    if (import.meta.client) {
+      clientAccessToken = token
+    }
+    accessTokenCookie.value = token
+  }
+
+  async function clearAuthAndRedirect(): Promise<void> {
+    await nuxtApp.runWithContext(async () => {
+      const authStore = useAuthStore()
+      authStore.clearAuth()
+      await navigateTo('/login')
+    })
+  }
 
   async function refreshAccessToken(): Promise<string | null> {
     try {
       const response = await $fetch<{ accessToken: string }>('/auth/refresh', {
-        baseURL: config.public.apiBase,
+        baseURL: apiBase,
         method: 'POST',
         credentials: 'include',
       })
 
-      accessToken = response.accessToken
-      return accessToken
+      writeAccessToken(response.accessToken)
+      return response.accessToken
     }
     catch {
-      accessToken = null
+      writeAccessToken(null)
       return null
     }
   }
 
   const api = $fetch.create({
-    baseURL: config.public.apiBase,
+    baseURL: apiBase,
     credentials: 'include',
 
     onRequest({ options }) {
-      if (!accessToken) {
+      const accessToken = readAccessToken()
+      if (!accessToken && !ssrCookie) {
         return
       }
 
-      options.headers = {
-        ...(options.headers as Record<string, string> | undefined),
-        Authorization: `Bearer ${accessToken}`,
-      }
+      const headers = new Headers(options.headers)
+      if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
+      if (ssrCookie && !headers.has('cookie')) headers.set('cookie', ssrCookie)
+      options.headers = headers
     },
 
     async onResponseError(context) {
@@ -52,9 +109,7 @@ export default defineNuxtPlugin(() => {
       }
 
       if (String(request).includes('/auth/refresh')) {
-        const authStore = useAuthStore()
-        authStore.clearAuth()
-        await navigateTo('/login')
+        await clearAuthAndRedirect()
         return
       }
 
@@ -63,17 +118,14 @@ export default defineNuxtPlugin(() => {
       refreshPromise = null
 
       if (newToken) {
-        options.headers = {
-          ...(options.headers as Record<string, string> | undefined),
-          Authorization: `Bearer ${newToken}`,
-        }
+        const headers = new Headers(options.headers)
+        headers.set('Authorization', `Bearer ${newToken}`)
+        options.headers = headers
 
-        return $fetch(request, options)
+        return $fetch(String(request), options as Parameters<typeof $fetch>[1])
       }
 
-      const authStore = useAuthStore()
-      authStore.clearAuth()
-      await navigateTo('/login')
+      await clearAuthAndRedirect()
     },
   })
 

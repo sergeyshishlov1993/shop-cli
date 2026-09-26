@@ -1,9 +1,17 @@
 type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
+type ReviewSort = 'newest' | 'oldest' | 'popular' | 'rating_desc' | 'rating_asc'
+
+type ReviewFilter = 'all' | 'with_media' | 'mine'
+
+interface ReviewMedia {
+  id: number
+  mediaType: 'IMAGE' | 'VIDEO'
+  file: FileRecord
+}
+
 interface Review {
   id: number
-  productId: number
-  userId: number
   parentId: number | null
   rating: number | null
   text: string
@@ -13,9 +21,13 @@ interface Review {
     id: number
     firstName: string | null
     lastName: string | null
-    avatarFile: FileRecord | null
+    avatar: { thumb: string | null, medium: string | null } | null
   }
+  media: ReviewMedia[]
+  likesCount: number
+  likedByMe: boolean
+  isAdminReply: boolean
   replies: Review[]
   createdAt: string
-  updatedAt: string
+  editedAt: string | null
 }

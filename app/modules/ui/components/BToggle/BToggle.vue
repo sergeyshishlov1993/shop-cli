@@ -1,12 +1,12 @@
 <script setup lang="ts">
-interface BToggleProps {
+interface Props {
   modelValue: boolean
   label?: string
   disabled?: boolean
   size?: 'sm' | 'md'
 }
 
-const props = withDefaults(defineProps<BToggleProps>(), {
+const props = withDefaults(defineProps<Props>(), {
   label: undefined,
   disabled: false,
   size: 'md',
@@ -17,56 +17,35 @@ const emit = defineEmits<{
 }>()
 
 const toggleId = useId()
-
-const trackSize = computed(() => {
-  return props.size === 'sm' ? 'w-9 h-5' : 'w-11 h-6'
-})
-
-const thumbSize = computed(() => {
-  return props.size === 'sm' ? 'size-3.5' : 'size-4'
-})
-
-const thumbTranslate = computed(() => {
-  if (props.modelValue) {
-    return props.size === 'sm' ? 'translate-x-4.5' : 'translate-x-5.5'
-  }
-  return 'translate-x-0.5'
-})
-
-function toggle() {
-  if (props.disabled) return
-  emit('update:modelValue', !props.modelValue)
-}
 </script>
 
 <template>
   <label
     :for="toggleId"
     class="inline-flex items-center gap-2.5"
-    :class="[disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer']"
+    :class="disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
   >
-    <button
+    <input
       :id="toggleId"
-      type="button"
-      role="switch"
-      :aria-checked="modelValue"
+      type="checkbox"
+      class="peer sr-only"
+      :checked="modelValue"
       :disabled="disabled"
-      class="relative inline-flex shrink-0 items-center rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
-      :class="[
-        trackSize,
-        modelValue ? 'bg-primary-500' : 'bg-secondary-300',
-      ]"
-      @click="toggle"
+      @change="emit('update:modelValue', ($event.target as HTMLInputElement).checked)"
+    >
+    <span
+      class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors peer-focus-visible:ring-1 peer-focus-visible:ring-primary-400 peer-focus-visible:ring-offset-2"
+      :class="modelValue ? 'border-primary-500 bg-primary-500' : 'border-secondary-300 bg-secondary-200'"
     >
       <span
-        class="rounded-full bg-white shadow-sm transition-transform duration-200"
-        :class="[thumbSize, thumbTranslate]"
+        class="absolute size-4 rounded-full bg-white transition-transform"
+        :class="modelValue ? 'translate-x-[1.5rem]' : 'translate-x-[0.25rem]'"
       />
-    </button>
+    </span>
     <span
       v-if="label"
-      class="text-secondary-800 select-none"
-      :class="[size === 'sm' ? 'text-sm' : 'text-base']"
+      class="select-none text-secondary-800"
+      :class="size === 'sm' ? 'text-sm' : 'text-base'"
     >
       {{ label }}
     </span>

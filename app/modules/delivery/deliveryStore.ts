@@ -1,3 +1,5 @@
+import { deliveryApi } from '~/modules/delivery/deliveryApi'
+
 export const useDeliveryStore = defineStore('delivery', () => {
   const cities = ref<DeliveryCity[]>([])
   const warehouses = ref<DeliveryWarehouse[]>([])

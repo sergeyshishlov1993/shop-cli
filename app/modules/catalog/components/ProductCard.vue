@@ -1,16 +1,24 @@
 <script setup lang="ts">
 import { useCatalogStore } from '~/modules/catalog/catalogStore'
 import { useCartStore } from '~/modules/cart/cartStore'
+import { useAuthStore } from '~/modules/auth/authStore'
+import { useFavoritesStore } from '~/modules/favorites/favoritesStore'
 
 interface Props {
   product: ProductListItem
+  compact?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  compact: false,
+})
 
 const catalogStore = useCatalogStore()
 const cartStore = useCartStore()
+const authStore = useAuthStore()
+const favoritesStore = useFavoritesStore()
 const router = useRouter()
+const toast = useToast()
 
 const isModalOpen = ref(false)
 const selectedVariant = ref<StorefrontVariant | null>(null)
@@ -20,6 +28,7 @@ const isAdded = ref(false)
 const isHovered = ref(false)
 const selectedColor = ref<number | null>(null)
 const selectedSizeName = ref<string | null>(null)
+const isFavorite = computed(() => favoritesStore.isFavorite(props.product.id))
 
 const productDetail = computed(() => catalogStore.currentProduct)
 const variants = computed(() => productDetail.value?.variants ?? [])
@@ -60,14 +69,14 @@ const discountPercent = computed(() => {
 })
 
 const mainImageUrl = computed(() => {
-  const img = props.product.mainImage
-  return img?.s3KeyMedium ?? img?.s3Key ?? null
+  return getFileUrl(props.product.mainImage, 'medium') || null
 })
 
 const hoverImageUrl = computed(() => {
-  const img = props.product.hoverImage
-  return img?.s3KeyMedium ?? img?.s3Key ?? null
+  return getFileUrl(props.product.hoverImage, 'medium') || null
 })
+
+const hoverVideoUrl = computed(() => getFileUrl(props.product.hoverVideo) || null)
 
 const displayImage = computed(() => {
   if (isHovered.value && hoverImageUrl.value) return hoverImageUrl.value
@@ -108,13 +117,13 @@ async function openQuickAdd() {
 
     const sizeNames = new Set(variants.value.map(v => v.size?.name ?? v.sku))
     if (sizeNames.size === 1) {
-      selectedSizeName.value = [...sizeNames][0]
+      selectedSizeName.value = [...sizeNames][0] ?? null
     }
 
     resolveVariant()
 
     if (variants.value.length === 1) {
-      selectedVariant.value = variants.value[0]
+      selectedVariant.value = variants.value[0] ?? null
     }
   } finally {
     loadingVariants.value = false
@@ -132,8 +141,14 @@ function closeModal() {
 
 async function addToCart() {
   if (!selectedVariant.value) return
-  await cartStore.addToCart(selectedVariant.value.id, quantity.value)
-  isAdded.value = true
+  try {
+    await cartStore.addToCart(selectedVariant.value.id, quantity.value)
+    isAdded.value = true
+    toast.success('Товар додано в кошик')
+  }
+  catch {
+    toast.error('Не вдалося додати товар у кошик')
+  }
 }
 
 function goToCart() {
@@ -153,21 +168,48 @@ function decrementQuantity() {
   }
 }
 
-function toggleWishlist() {
-  // TODO: wishlist integration
+async function toggleWishlist() {
+  if (!authStore.isAuthenticated) {
+    await router.push({ path: '/login', query: { redirect: `/product/${props.product.slug}` } })
+    return
+  }
+
+  try {
+    await favoritesStore.toggle(props.product.id)
+    toast.success(isFavorite.value ? 'Додано в обране' : 'Прибрано з обраного')
+  }
+  catch {
+    toast.error('Не вдалося оновити обране')
+  }
 }
+
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    favoritesStore.checkProducts([props.product.id]).catch(() => undefined)
+  }
+})
 </script>
 
 <template>
-  <div class="group relative flex flex-col">
+  <div :class="['product-card group relative flex h-full flex-col', { 'product-card--compact': compact }]">
     <NuxtLink
         :to="`/product/${product.slug}`"
-        class="relative aspect-[3/4] overflow-hidden rounded-xl bg-secondary-100"
+        class="product-card__image relative aspect-[3/4] overflow-hidden rounded-sm bg-secondary-100"
         @mouseenter="isHovered = true"
         @mouseleave="isHovered = false"
     >
+      <video
+          v-if="isHovered && hoverVideoUrl"
+          :src="hoverVideoUrl"
+          :poster="mainImageUrl ?? undefined"
+          class="h-full w-full object-cover"
+          autoplay
+          muted
+          loop
+          playsinline
+      />
       <img
-          v-if="displayImage"
+          v-else-if="displayImage"
           :src="displayImage"
           :alt="product.name"
           class="h-full w-full object-cover transition-opacity duration-300"
@@ -176,43 +218,63 @@ function toggleWishlist() {
         <Icon name="mdi:image-outline" size="48" />
       </div>
 
-      <div class="absolute left-3 top-3 flex flex-col gap-1">
+      <div class="absolute left-2 top-2 flex flex-wrap gap-1 pr-10">
         <span
             v-if="hasDiscount"
-            class="rounded-lg bg-danger px-2 py-0.5 text-xs font-semibold text-white"
+            class="rounded-sm bg-primary-700 px-1.5 py-0.5 text-[10px] font-medium tracking-widest text-white"
         >
           -{{ discountPercent }}%
         </span>
         <span
             v-if="product.isNew"
-            class="rounded-lg bg-primary-500 px-2 py-0.5 text-xs font-semibold text-white"
+            class="rounded-sm bg-white px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-widest text-secondary-800"
         >
           New
         </span>
         <span
             v-if="product.isHit"
-            class="rounded-lg bg-warning px-2 py-0.5 text-xs font-semibold text-white"
+            class="rounded-sm bg-primary-300 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-widest text-secondary-900"
         >
           Hit
         </span>
       </div>
 
+      <span
+          class="absolute bottom-2 left-2 flex items-center gap-1 rounded-sm bg-primary-700 px-1.5 py-0.5 text-[11px] font-medium text-white"
+          :title="`Відгуків: ${product.reviewCount ?? 0}`"
+      >
+        {{ Number((product.averageRating ?? 0).toFixed(1)) }}
+        <Icon name="mdi:star" size="13" class="text-primary-200" />
+      </span>
+
       <button
-          class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-secondary-500 shadow-sm transition-colors hover:text-danger"
+          type="button"
+          class="glass absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:text-primary-700"
+          :class="isFavorite ? 'text-primary-700' : 'text-secondary-700'"
+          :aria-label="isFavorite ? 'Видалити з обраного' : 'Додати до обраного'"
           @click.prevent="toggleWishlist"
       >
-        <Icon name="mdi:heart-outline" size="20" />
+        <Icon :name="isFavorite ? 'mdi:heart' : 'mdi:heart-outline'" size="20" />
       </button>
     </NuxtLink>
 
-    <div class="mt-3 flex flex-col gap-1">
-      <span v-if="product.brand" class="text-xs text-secondary-500">
+    <NuxtLink v-if="compact" :to="`/product/${product.slug}`" class="mt-2 flex min-w-0 flex-col gap-0.5">
+      <span class="truncate text-[13px] text-secondary-700">{{ product.name }}</span>
+      <span class="flex items-baseline gap-2">
+        <span class="text-sm font-semibold text-secondary-900">{{ product.effectivePrice }} ₴</span>
+        <span v-if="hasDiscount" class="text-xs text-secondary-400 line-through">{{ product.oldPrice }} ₴</span>
+      </span>
+    </NuxtLink>
+
+    <div v-if="!compact" class="mt-3 flex flex-1 flex-col gap-1">
+      <span v-if="product.brand" class="truncate text-xs text-secondary-500">
         {{ product.brand }}
       </span>
+      <span v-else class="h-4" aria-hidden="true" />
 
       <NuxtLink
           :to="`/product/${product.slug}`"
-          class="text-sm font-medium text-secondary-800 transition-colors hover:text-primary-500"
+          class="product-card__name text-sm font-medium text-secondary-800 transition-colors hover:text-primary-500"
       >
         {{ product.name }}
       </NuxtLink>
@@ -226,18 +288,11 @@ function toggleWishlist() {
         </span>
       </div>
 
-      <div v-if="product.averageRating" class="flex items-center gap-1">
-        <Icon name="mdi:star" size="14" class="text-warning" />
-        <span class="text-xs text-secondary-500">
-          {{ product.averageRating }} ({{ product.reviewCount }})
-        </span>
-      </div>
-
       <BBtn
           variant="primary"
           size="sm"
           block
-          class="mt-2"
+          class="mt-auto sm:mt-auto"
           @click="openQuickAdd"
       >
         <Icon name="mdi:cart-outline" size="16" />
@@ -383,3 +438,17 @@ function toggleWishlist() {
     </BModal>
   </div>
 </template>
+
+<style scoped>
+.product-card__name {
+  display: -webkit-box;
+  min-height: 2.5rem;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.product-card--compact .product-card__image {
+  background: #f5ede8;
+}
+</style>

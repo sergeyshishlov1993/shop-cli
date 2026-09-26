@@ -11,13 +11,46 @@ interface ChangePasswordDto {
 
 interface AccountOrdersQuery {
   status?: OrderStatus
+  orderNumber?: string
+  date?: string
   page?: number
   limit?: number
 }
 
+interface AccountOrderDetail {
+  id: number
+  orderNumber: string
+  status: OrderStatus
+  totalAmount: number
+  subtotal: number
+  discountAmount: number
+  deliveryAmount: number
+  deliveryProvider: string | null
+  city: string | null
+  warehouse: string | null
+  addressLine: string | null
+  trackingNumber: string | null
+  createdAt: string
+  items: Array<{ id: number, productName: string, sku: string, sizeName: string | null, colorName: string | null, salePrice: number, quantity: number, lineRevenue: number, image?: FileRecord | null }>
+  statusHistory: Array<{ id: number, oldStatus: OrderStatus | null, newStatus: OrderStatus, note: string | null, createdAt: string }>
+}
+
+interface AccountTrackingInfo {
+  ttn: string
+  statusCode: string
+  statusDescription: string
+  orderStatus?: OrderStatus
+  statusChanged?: boolean
+}
+
 interface AccountOrdersResponse {
-  items: Order[]
-  totalCount: number
+  items: AccountOrderSummary[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
 }
 
 interface CreateDeliveryProfileDto {
@@ -50,6 +83,21 @@ export const accountApi = {
     })
   },
 
+  uploadAvatar(file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return useNuxtApp().$api<UserProfile>('/storefront/account/avatar', {
+      method: 'POST',
+      body: formData,
+    })
+  },
+
+  deleteAvatar() {
+    return useNuxtApp().$api<UserProfile>('/storefront/account/avatar', {
+      method: 'DELETE',
+    })
+  },
+
   changePassword(dto: ChangePasswordDto) {
     const { $api } = useNuxtApp()
     return $api('/storefront/account/password', {
@@ -63,6 +111,18 @@ export const accountApi = {
     return $api<AccountOrdersResponse>('/storefront/account/orders', {
       params: query,
     })
+  },
+
+  getOrder(orderId: number) {
+    return useNuxtApp().$api<AccountOrderDetail>(`/storefront/account/orders/${orderId}`)
+  },
+
+  getOrderTracking(orderId: number) {
+    return useNuxtApp().$api<AccountTrackingInfo | null>(`/storefront/orders/${orderId}/tracking`)
+  },
+
+  reorder(orderId: number) {
+    return useNuxtApp().$api<{ added: unknown[], skipped: unknown[] }>(`/storefront/account/orders/${orderId}/reorder`, { method: 'POST' })
   },
 
   getDeliveryProfiles() {

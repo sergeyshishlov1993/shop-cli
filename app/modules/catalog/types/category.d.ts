@@ -8,8 +8,16 @@ interface Category {
   parentId: number | null
   parent: Category | null
   children: Category[]
+  /** Товаров в наличии, у родителя — вместе с подкатегориями. */
+  productCount: number
   imageFile: FileRecord | null
   bannerFile: FileRecord | null
+  focalX?: number
+  focalY?: number
+  focalXTablet?: number
+  focalYTablet?: number
+  focalXMobile?: number
+  focalYMobile?: number
   metaTitle: string | null
   metaDescription: string | null
   isActive: boolean

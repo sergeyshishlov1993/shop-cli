@@ -2,120 +2,102 @@
 interface Props {
   modelValue: boolean
   title?: string
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
-  closable?: boolean
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   persistent?: boolean
+  closable?: boolean
+  fullscreen?: boolean
+  /** Без шапки: заголовок і × рендерить сам вміст */
+  headless?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   title: '',
   size: 'md',
-  closable: true,
   persistent: false,
+  closable: true,
+  fullscreen: false,
+  headless: false,
 })
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-const sizeClasses: Record<string, string> = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
-  full: 'max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)]',
-}
+const widthClass = computed(() => {
+  if (props.fullscreen) return 'h-dvh w-screen max-w-none'
+  if (props.size === 'sm') return 'w-[min(26rem,calc(100vw-2rem))]'
+  if (props.size === 'xl') return 'h-[min(52rem,calc(100dvh-2rem))] w-[min(90rem,calc(100vw-2rem))]'
+  if (props.size === 'lg') return 'w-[min(54rem,calc(100vw-2rem))]'
+  return 'w-[min(36rem,calc(100vw-2rem))]'
+})
 
 function close() {
   if (!props.closable) return
   emit('update:modelValue', false)
 }
 
-function onOverlayClick() {
-  if (!props.persistent) close()
+function onMaskClick() {
+  if (props.persistent) return
+  close()
 }
 
-function onEscape(event: KeyboardEvent) {
-  if (event.key === 'Escape' && !props.persistent) close()
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && props.modelValue && !props.persistent) close()
 }
 
 watch(() => props.modelValue, (isOpen) => {
-  if (isOpen) {
-    document.body.style.overflow = 'hidden'
-    document.addEventListener('keydown', onEscape)
-  } else {
-    document.body.style.overflow = ''
-    document.removeEventListener('keydown', onEscape)
-  }
+  if (!import.meta.client) return
+  document.body.style.overflow = isOpen ? 'hidden' : ''
 })
 
-onUnmounted(() => {
-  document.body.style.overflow = ''
-  document.removeEventListener('keydown', onEscape)
+onMounted(() => document.addEventListener('keydown', onKeydown))
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeydown)
+  if (import.meta.client) document.body.style.overflow = ''
 })
 </script>
 
 <template>
   <Teleport to="body">
-    <Transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
+    <Transition name="b-fade">
       <div
         v-if="modelValue"
-        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4"
-        @click.self="onOverlayClick"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
       >
-        <Transition
-          enter-active-class="transition duration-200 ease-out"
-          enter-from-class="scale-95 opacity-0"
-          enter-to-class="scale-100 opacity-100"
-          leave-active-class="transition duration-150 ease-in"
-          leave-from-class="scale-100 opacity-100"
-          leave-to-class="scale-95 opacity-0"
-        >
+        <div class="b-overlay" @click="onMaskClick" />
+
+        <Transition name="b-zoom" appear>
           <div
             v-if="modelValue"
-            class="w-full rounded-xl border border-secondary-200 bg-white shadow-xl"
-            :class="sizeClasses[size]"
+            class="relative flex max-h-[calc(100dvh-2rem)] flex-col glass glass--strong rounded-xl overflow-hidden"
+            :class="widthClass"
           >
             <div
-              v-if="title || closable"
-              class="flex items-center justify-between border-b border-secondary-200 px-6 py-4"
+              v-if="!headless && (title || closable)"
+              class="flex items-center justify-between gap-4 border-b border-secondary-200 px-5 py-4 sm:px-6"
             >
-              <h2 class="text-base font-semibold text-secondary-800">
-                {{ title }}
-              </h2>
-
+              <h2 class="store-title text-base sm:text-lg">{{ title }}</h2>
               <button
                 v-if="closable"
-                class="flex h-8 w-8 items-center justify-center rounded-lg text-secondary-400 transition-colors hover:bg-secondary-100 hover:text-secondary-600"
+                type="button"
+                class="flex size-8 shrink-0 items-center justify-center text-secondary-500 transition-colors hover:text-secondary-900"
+                aria-label="Закрити"
                 @click="close"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="h-5 w-5"
-                >
-                  <path
-                    d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
-                  />
-                </svg>
+                <Icon name="lucide:x" class="size-5" />
               </button>
             </div>
 
-            <div class="px-6 py-4">
+            <div class="flex-1 overflow-y-auto" :class="size === 'xl' ? 'min-h-0' : 'px-5 py-5 sm:px-6'">
               <slot />
             </div>
 
             <div
               v-if="$slots.footer"
-              class="border-t border-secondary-200 px-6 py-4"
+              class="border-t border-secondary-200 px-5 py-4 sm:px-6"
             >
               <slot name="footer" />
             </div>

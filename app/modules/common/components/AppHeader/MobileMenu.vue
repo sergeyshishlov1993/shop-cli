@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { useConfirm } from '~/modules/ui/composables/useConfirm'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '~/modules/auth/authStore'
+import { useCatalogStore } from '~/modules/catalog/catalogStore'
 import BDrawer from '~/modules/ui/components/BDrawer/BDrawer.vue'
 import BAccordion from '~/modules/ui/components/BAccordion/BAccordion.vue'
 
@@ -17,18 +19,15 @@ const emit = defineEmits<{
 const router = useRouter()
 
 const authStore = useAuthStore()
+const catalogStore = useCatalogStore()
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const isAdmin = computed(() => authStore.isAdmin)
 
-const categories = ref([
-  { label: 'Новинки', slug: 'novinki' },
-  { label: 'Сукні', slug: 'sukni' },
-  { label: 'Верхній одяг', slug: 'verkhnij-odyag' },
-  { label: 'Корсети', slug: 'korsety' },
-  { label: 'Спідниці', slug: 'spidnyci' },
-  { label: 'Блузи', slug: 'bluzy' },
-  { label: 'Штани', slug: 'shtany' },
-])
+const categories = computed(() => {
+  return catalogStore.categories
+    .filter((category) => category.isActive && !category.parentId)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+})
 
 const accordionItems = computed(() => [
   {
@@ -42,42 +41,78 @@ function navigateAndClose(path: string) {
   router.push(path)
 }
 
-function handleLogout() {
+const { confirm } = useConfirm()
+
+async function handleLogout() {
+  if (!(await confirm({ title: 'Вийти з акаунта?', message: 'Ви зможете увійти знову будь-коли.', confirmText: 'Вийти', variant: 'warning' }))) return
   authStore.logout()
   emit('update:modelValue', false)
 }
+
+onMounted(() => {
+  catalogStore.fetchCategories().catch(() => undefined)
+})
 </script>
 
 <template>
   <BDrawer
     :model-value="props.modelValue"
     side="left"
-    title=""
-    width="w-80"
+    title="Меню"
+    width="w-[min(20rem,88vw)]"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <div class="flex flex-col h-full">
-      <div class="flex-1 overflow-y-auto">
+      <div class="flex-1 overflow-y-auto px-4 pb-4">
         <BAccordion :items="accordionItems" :multiple="false">
           <template #item="{ item, isOpen }">
             <div v-if="item.key === 'categories' && isOpen" class="space-y-1 pb-2">
               <button
                 v-for="category in categories"
-                :key="category.slug"
+                :key="category.id"
                 type="button"
-                class="block w-full px-4 py-2.5 text-left text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-secondary-900"
+                class="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-primary-700"
                 @click="navigateAndClose(`/catalog/${category.slug}`)"
               >
-                {{ category.label }}
+                {{ category.name }}
               </button>
             </div>
           </template>
         </BAccordion>
 
-        <nav class="border-t border-gray-200 py-2">
+        <nav class="mt-2 flex flex-col gap-0.5 border-t border-secondary-200 pt-3">
+          <button
+            v-if="isAuthenticated"
+            type="button"
+            class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-primary-700"
+            @click="navigateAndClose('/account')"
+          >
+            <Icon name="lucide:user" size="20" />
+            <span>Особистий кабінет</span>
+          </button>
+
+          <button
+            v-if="isAdmin"
+            type="button"
+            class="flex w-full items-center gap-3 rounded-xl bg-primary-100 px-3 py-3 text-sm font-medium text-primary-800 transition hover:bg-primary-200"
+            @click="navigateAndClose('/admin')"
+          >
+            <Icon name="lucide:shield" size="20" />
+            <span>Адмін-панель</span>
+          </button>
+
           <button
             type="button"
-            class="flex w-full items-center gap-3 px-4 py-3 text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-secondary-900"
+            class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-primary-700"
+            @click="navigateAndClose('/favorites')"
+          >
+            <Icon name="lucide:heart" size="20" />
+            <span>Обране</span>
+          </button>
+
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-primary-700"
             @click="navigateAndClose('/catalog')"
           >
             <Icon name="lucide:layout-grid" size="20" />
@@ -86,50 +121,38 @@ function handleLogout() {
 
           <button
             type="button"
-            class="flex w-full items-center gap-3 px-4 py-3 text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-secondary-900"
-            @click="navigateAndClose('/account/favorites')"
+            class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-primary-700"
+            @click="navigateAndClose('/catalog?isNew=true')"
           >
-            <Icon name="lucide:heart" size="20" />
-            <span>Обране</span>
+            <Icon name="lucide:sparkles" size="20" />
+            <span>Новинки</span>
           </button>
 
-          <template v-if="isAuthenticated">
-            <button
-              type="button"
-              class="flex w-full items-center gap-3 px-4 py-3 text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-secondary-900"
-              @click="navigateAndClose('/account/orders')"
-            >
-              <Icon name="lucide:package" size="20" />
-              <span>Замовлення</span>
-            </button>
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-primary-700"
+            @click="navigateAndClose('/catalog?isHit=true')"
+          >
+            <Icon name="lucide:flame" size="20" />
+            <span>Хіти продажів</span>
+          </button>
 
-            <button
-              type="button"
-              class="flex w-full items-center gap-3 px-4 py-3 text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-secondary-900"
-              @click="navigateAndClose('/account')"
-            >
-              <Icon name="lucide:user" size="20" />
-              <span>Профіль</span>
-            </button>
-
-            <button
-              v-if="isAdmin"
-              type="button"
-              class="flex w-full items-center gap-3 px-4 py-3 text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-secondary-900"
-              @click="navigateAndClose('/admin')"
-            >
-              <Icon name="lucide:shield" size="20" />
-              <span>Адмінка</span>
-            </button>
-          </template>
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-secondary-700 transition hover:bg-primary-50 hover:text-primary-700"
+            @click="navigateAndClose('/catalog?isSeasonal=true')"
+          >
+            <Icon name="lucide:shirt" size="20" />
+            <span>Сезонна добірка</span>
+          </button>
         </nav>
       </div>
 
-      <div class="border-t border-gray-200 p-4">
+      <div class="border-t border-secondary-200 p-4">
         <button
           v-if="isAuthenticated"
           type="button"
-          class="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 py-2.5 text-sm text-secondary-700 transition hover:bg-primary-50"
+          class="b-btn b-btn--outline b-btn--md b-btn--block"
           @click="handleLogout"
         >
           <Icon name="lucide:log-out" size="18" />
@@ -139,11 +162,21 @@ function handleLogout() {
         <button
           v-else
           type="button"
-          class="flex w-full items-center justify-center gap-2 rounded-lg bg-secondary-800 py-2.5 text-sm text-white transition hover:bg-secondary-900"
-          @click="navigateAndClose('/login')"
+          class="b-btn b-btn--primary b-btn--md b-btn--block"
+          @click="navigateAndClose('/login?redirect=/account')"
         >
           <Icon name="lucide:user" size="18" />
           <span>Увійти</span>
+        </button>
+
+        <button
+          v-if="!isAuthenticated"
+          type="button"
+          class="b-btn b-btn--outline b-btn--md b-btn--block mt-3"
+          @click="navigateAndClose('/register')"
+        >
+          <Icon name="lucide:user-plus" size="18" />
+          <span>Зареєструватися</span>
         </button>
       </div>
     </div>

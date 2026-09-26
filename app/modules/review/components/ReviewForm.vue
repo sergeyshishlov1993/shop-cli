@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useReviewStore } from '~/modules/review/reviewStore'
+import { useToast } from '~/modules/ui/composables/useToast'
+import ReviewMediaPicker from '~/modules/review/components/ReviewMediaPicker.vue'
+
 interface Props {
   productId: number
 }
@@ -10,11 +14,14 @@ const emit = defineEmits<{
 }>()
 
 const reviewStore = useReviewStore()
+const toast = useToast()
 const { submitting } = storeToRefs(reviewStore)
 
 const rating = ref(0)
 const text = ref('')
 const error = ref('')
+const media = ref<File[]>([])
+const MAX_MEDIA = 5
 
 const isValid = computed(() => rating.value > 0 && text.value.trim().length > 0)
 
@@ -28,13 +35,19 @@ async function onSubmit() {
     const review = await reviewStore.create(props.productId, {
       rating: rating.value,
       text: text.value.trim(),
+      media: media.value,
     })
     rating.value = 0
     text.value = ''
+    media.value = []
+    toast.success('Відгук опубліковано')
     emit('submit', review)
   }
-  catch {
-    error.value = 'Не вдалося надіслати відгук'
+  catch (e) {
+    error.value = (e as { statusCode?: number })?.statusCode === 409
+      ? 'Ви вже залишили відгук на цей товар — його можна відредагувати у списку відгуків'
+      : 'Не вдалося надіслати відгук'
+    toast.error(error.value)
   }
 }
 </script>
@@ -56,6 +69,8 @@ async function onSubmit() {
       placeholder="Поділіться враженнями"
       :rows="4"
     />
+
+    <ReviewMediaPicker v-model="media" :max="MAX_MEDIA" @error="error = $event" />
 
     <p v-if="error" class="text-sm text-danger">
       {{ error }}

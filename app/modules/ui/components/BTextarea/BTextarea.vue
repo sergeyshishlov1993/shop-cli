@@ -10,10 +10,6 @@ interface Props {
   id?: string
 }
 
-interface Emits {
-  (event: 'update:modelValue', value: string): void
-}
-
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
   placeholder: '',
@@ -22,60 +18,42 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   required: false,
   rows: 4,
-  id: undefined
+  id: undefined,
 })
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<{
+  'update:modelValue': [value: string]
+}>()
+
 const generatedId = useId()
-
 const textareaId = computed(() => props.id || generatedId)
-
-const textareaClass = computed(() => {
-  const baseClass =
-    'min-h-28 w-full rounded-xl border bg-white px-4 py-3 text-secondary-900 transition-colors duration-200 placeholder:text-secondary-400 focus:border-primary-400 disabled:cursor-not-allowed disabled:bg-secondary-100 resize-none'
-  const stateClass = props.error ? 'border-danger' : 'border-secondary-200'
-
-  return [baseClass, stateClass]
-})
-
-const onInput = (event: Event) => {
-  const target = event.target as HTMLTextAreaElement
-  emit('update:modelValue', target.value)
-}
 </script>
 
 <template>
-  <div class="flex flex-col gap-1.5">
+  <div class="b-field">
     <label
-      v-if="props.label"
+      v-if="label"
       :for="textareaId"
-      class="text-sm font-medium text-secondary-800"
+      class="b-field__label"
     >
-      {{ props.label }}
-      <span
-        v-if="props.required"
-        class="text-danger"
-      >
-        *
-      </span>
+      {{ label }}
+      <span v-if="required" class="b-field__required">*</span>
     </label>
 
     <textarea
       :id="textareaId"
-      :value="props.modelValue"
-      :placeholder="props.placeholder"
-      :disabled="props.disabled"
-      :required="props.required"
-      :rows="props.rows"
-      :class="textareaClass"
-      @input="onInput"
+      :value="modelValue"
+      :placeholder="placeholder"
+      :disabled="disabled"
+      :required="required"
+      :rows="rows"
+      :aria-invalid="Boolean(error)"
+      :class="['b-textarea', error ? 'b-textarea--invalid' : '']"
+      @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
     />
 
-    <p
-      v-if="props.error"
-      class="text-sm text-danger"
-    >
-      {{ props.error }}
+    <p v-if="error" class="b-field__error">
+      {{ error }}
     </p>
   </div>
 </template>

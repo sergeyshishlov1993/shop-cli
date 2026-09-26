@@ -1,0 +1,414 @@
+/* UI Kit — власні компоненти B* (без сторонніх бібліотек UI) */
+
+/* --- Кнопки --- */
+.b-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid transparent;
+    /* Єдина сітка кнопок: фіксовані висоти 36/44/52px (= висота полів), однаковий радіус 12px */
+    border-radius: 0.75rem;
+    line-height: 1;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, opacity 0.25s ease;
+}
+
+.b-btn--sm {
+    height: 2.25rem;
+    padding: 0 0.875rem;
+    font-size: 0.6875rem;
+}
+
+.b-btn--md {
+    height: 2.75rem;
+    padding: 0 1.5rem;
+    font-size: 0.75rem;
+}
+
+.b-btn--lg {
+    height: 3.25rem;
+    padding: 0 2.25rem;
+    font-size: 0.8125rem;
+}
+
+.b-btn--block {
+    width: 100%;
+}
+
+.b-btn--primary {
+    /* Суцільний пудровий фон — напівпрозорість робила кнопку схожою на неактивну */
+    background: var(--color-primary-500);
+    border-color: var(--color-primary-500);
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 6px 18px -10px var(--color-primary-700);
+}
+
+.b-btn--primary:hover {
+    background: var(--color-primary-600);
+    border-color: var(--color-primary-600);
+}
+
+.b-btn--secondary {
+    background: var(--glass-bg);
+    border-color: var(--glass-border);
+    color: var(--color-secondary-900);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
+    box-shadow: inset 0 1px 0 var(--glass-highlight), var(--glass-shadow);
+}
+
+.b-btn--secondary:hover {
+    background: color-mix(in srgb, var(--surface) 85%, transparent);
+}
+
+.b-btn--outline {
+    background: var(--glass-bg);
+    border-color: var(--color-secondary-800);
+    color: var(--color-secondary-800);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+}
+
+/* Текст на ховері — колір поверхні, щоб він лишався читабельним і в темній темі */
+.b-btn--outline:hover {
+    background: var(--color-secondary-800);
+    color: var(--surface);
+}
+
+.b-btn--ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--color-secondary-800);
+    padding-inline: 0.25rem;
+}
+
+.b-btn--ghost:hover {
+    color: var(--color-primary-700);
+}
+
+.b-btn--danger {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: #fff;
+}
+
+.b-btn--danger:hover {
+    opacity: 0.88;
+}
+
+.b-btn--icon {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    padding: 0;
+    border-radius: 999px;
+}
+
+.b-btn--icon.b-btn--sm {
+    width: 2.25rem;
+    min-width: 2.25rem;
+}
+
+.b-btn[disabled],
+.b-btn--disabled {
+    pointer-events: none;
+    opacity: 0.45;
+}
+
+/* Неактивна основна кнопка — сіра, щоб її не плутати з активною пудровою */
+.b-btn--primary[disabled],
+.b-btn--primary.b-btn--disabled {
+    background: var(--color-secondary-200);
+    border-color: var(--color-secondary-200);
+    color: var(--color-secondary-500);
+    box-shadow: none;
+    opacity: 1;
+}
+
+/* --- Поля --- */
+.b-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4375rem;
+}
+
+.b-field__label {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-secondary-600);
+}
+
+.b-field__required,
+.b-field__error {
+    color: var(--color-danger);
+}
+
+.b-field__error {
+    font-size: 0.75rem;
+}
+
+.b-input,
+.b-textarea,
+.b-select {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.6875rem 0.9375rem;
+    border: 1px solid var(--color-secondary-300);
+    border-radius: 0.75rem;
+    background: var(--surface);
+    color: var(--color-secondary-800);
+    font-size: 0.875rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Поле пошуку: місце під іконку лупи зліва та кнопки справа (базовий padding .b-input інакше перебиває утиліти pl-11) */
+.b-input.b-input--search {
+    padding-left: 2.75rem;
+    padding-right: 2.75rem;
+}
+
+/* Поле й кнопка md в одному рядку — однакові 44px */
+.b-input,
+.b-select {
+    height: 2.75rem;
+}
+
+.b-textarea {
+    min-height: 6rem;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+.b-input::placeholder,
+.b-textarea::placeholder {
+    color: var(--color-secondary-400);
+}
+
+.b-input:focus,
+.b-textarea:focus,
+.b-select:focus {
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgb(216 167 160 / 0.25);
+    outline: none;
+}
+
+.b-input:disabled,
+.b-textarea:disabled,
+.b-select:disabled {
+    /* Неактивне поле — той самий фон і рамка, лише приглушене (без тонованої заливки) */
+    background: var(--surface);
+    color: var(--color-secondary-500);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.b-input--invalid,
+.b-textarea--invalid,
+.b-select--invalid {
+    border-color: var(--color-danger);
+}
+
+/* Прибирає нативний хрестик пошуку в WebKit — використовуємо власний */
+.b-input[type="search"]::-webkit-search-cancel-button,
+.b-input[type="search"]::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.b-input[type="number"]::-webkit-outer-spin-button,
+.b-input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+}
+
+.b-select {
+    appearance: none;
+    padding-right: 2.5rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%238c7f79' stroke-width='1.5'%3E%3Cpath d='m5 8 5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.875rem center;
+    background-size: 1rem;
+    cursor: pointer;
+}
+
+/* --- Поверхні --- */
+.b-card {
+    border: 1px solid var(--color-secondary-200);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--color-secondary-800);
+}
+
+.b-surface {
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    border: 1px solid var(--color-secondary-200);
+}
+
+/* --- Теги / бейджі --- */
+.b-tag,
+.b-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: var(--radius-xs);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+
+.b-tag--primary,
+.b-badge--primary {
+    background: var(--color-primary-500);
+    color: #fff;
+}
+
+.b-tag--success,
+.b-badge--success {
+    background: var(--color-success);
+    color: #fff;
+}
+
+.b-tag--warning,
+.b-badge--warning {
+    background: var(--color-warning);
+    color: #fff;
+}
+
+.b-tag--danger,
+.b-badge--danger {
+    background: var(--color-danger);
+    color: #fff;
+}
+
+.b-tag--info,
+.b-badge--info {
+    background: var(--color-info);
+    color: #fff;
+}
+
+.b-tag--secondary,
+.b-badge--secondary {
+    background: var(--color-secondary-100);
+    color: var(--color-secondary-800);
+}
+
+.b-tag--text,
+.b-badge--text {
+    background: transparent;
+    padding-inline: 0;
+}
+
+.b-tag--text.b-tag--primary,
+.b-badge--text.b-badge--primary {
+    color: var(--color-primary-500);
+}
+
+.b-tag--text.b-tag--success,
+.b-badge--text.b-badge--success {
+    color: var(--color-success);
+}
+
+.b-tag--text.b-tag--warning,
+.b-badge--text.b-badge--warning {
+    color: var(--color-warning);
+}
+
+.b-tag--text.b-tag--danger,
+.b-badge--text.b-badge--danger {
+    color: var(--color-danger);
+}
+
+.b-tag--text.b-tag--info,
+.b-badge--text.b-badge--info {
+    color: var(--color-info);
+}
+
+.b-tag--text.b-tag--secondary,
+.b-badge--text.b-badge--secondary {
+    color: var(--color-secondary-500);
+}
+
+/* --- Оверлеї --- */
+.b-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgb(58 50 48 / 0.4);
+    backdrop-filter: blur(4px);
+}
+
+/* --- Анімації --- */
+.b-fade-enter-active,
+.b-fade-leave-active {
+    transition: opacity 0.25s ease;
+}
+
+.b-fade-enter-from,
+.b-fade-leave-to {
+    opacity: 0;
+}
+
+.b-slide-right-enter-active,
+.b-slide-right-leave-active,
+.b-slide-left-enter-active,
+.b-slide-left-leave-active,
+.b-slide-up-enter-active,
+.b-slide-up-leave-active,
+.b-slide-down-enter-active,
+.b-slide-down-leave-active {
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.b-slide-right-enter-from,
+.b-slide-right-leave-to {
+    transform: translateX(100%);
+}
+
+.b-slide-left-enter-from,
+.b-slide-left-leave-to {
+    transform: translateX(-100%);
+}
+
+.b-slide-up-enter-from,
+.b-slide-up-leave-to {
+    transform: translateY(100%);
+}
+
+.b-slide-down-enter-from,
+.b-slide-down-leave-to {
+    transform: translateY(-100%);
+}
+
+.b-zoom-enter-active,
+.b-zoom-leave-active {
+    transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.b-zoom-enter-from,
+.b-zoom-leave-to {
+    opacity: 0;
+    transform: translateY(0.75rem);
+}
+
+@keyframes b-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.b-spinner {
+    display: inline-block;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 999px;
+    animation: b-spin 0.7s linear infinite;
+}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-export type SortOption = 'newest' | 'price_asc' | 'price_desc'
+export type SortOption = 'newest' | 'price_asc' | 'price_desc' | 'name_asc'
 
 export interface CatalogAvailableFilters {
   priceRange: { min: number; max: number } | null
@@ -11,7 +11,7 @@ export interface CatalogAvailableFilters {
 }
 
 export interface CatalogFilterState {
-  sort: SortOption
+  sort?: SortOption
   priceMin: number | null
   priceMax: number | null
   isNew: boolean
@@ -20,11 +20,20 @@ export interface CatalogFilterState {
   colors: number[]
   sizes: number[]
   brands: string[]
+  seasons: string[]
+  materials: string[]
 }
 
-interface SortOptionItem {
-  value: SortOption
-  label: string
+type StringFilterKey = 'brands' | 'seasons' | 'materials'
+
+const SEASON_LABELS: Record<string, string> = {
+  SPRING: 'Весна',
+  SUMMER: 'Літо',
+  AUTUMN: 'Осінь',
+  FALL: 'Осінь',
+  WINTER: 'Зима',
+  ALL_SEASON: 'Всесезон',
+  DEMI: 'Демісезон',
 }
 
 interface PriceRangeValue {
@@ -36,12 +45,6 @@ interface AccordionItem {
   key: string
   title: string
 }
-
-const SORT_OPTIONS: readonly SortOptionItem[] = [
-  { value: 'newest', label: 'Новинки' },
-  { value: 'price_asc', label: 'Ціна за зростанням' },
-  { value: 'price_desc', label: 'Ціна за спаданням' },
-] as const
 
 const props = defineProps<{
   modelValue: CatalogFilterState
@@ -62,6 +65,8 @@ const state = reactive<CatalogFilterState>({
   colors: [...props.modelValue.colors],
   sizes: [...props.modelValue.sizes],
   brands: [...props.modelValue.brands],
+  seasons: [...props.modelValue.seasons],
+  materials: [...props.modelValue.materials],
 })
 
 watch(
@@ -76,6 +81,8 @@ watch(
       state.colors.splice(0, state.colors.length, ...next.colors)
       state.sizes.splice(0, state.sizes.length, ...next.sizes)
       state.brands.splice(0, state.brands.length, ...next.brands)
+      state.seasons.splice(0, state.seasons.length, ...next.seasons)
+      state.materials.splice(0, state.materials.length, ...next.materials)
     },
     { deep: true },
 )
@@ -93,6 +100,8 @@ watch(
         colors: [...state.colors],
         sizes: [...state.sizes],
         brands: [...state.brands],
+        seasons: [...state.seasons],
+        materials: [...state.materials],
       })
     },
     { deep: true },
@@ -114,7 +123,7 @@ const priceRangeModel = computed<PriceRangeValue>({
 
 const accordionItems = computed<AccordionItem[]>(() => {
   const items: AccordionItem[] = [
-    { key: 'sort', title: 'Сортування' },
+    { key: 'quick', title: 'Швидкі фільтри' },
   ]
 
   if (props.filtersData.sizes.length) {
@@ -127,6 +136,14 @@ const accordionItems = computed<AccordionItem[]>(() => {
 
   if (props.filtersData.brands.length) {
     items.push({ key: 'brands', title: 'Бренди' })
+  }
+
+  if (props.filtersData.seasons.length) {
+    items.push({ key: 'seasons', title: 'Сезон' })
+  }
+
+  if (props.filtersData.materials.length) {
+    items.push({ key: 'materials', title: 'Матеріал' })
   }
 
   if (props.filtersData.priceRange) {
@@ -148,7 +165,7 @@ const toggleNumberItem = (key: 'colors' | 'sizes', value: number): void => {
   collection.splice(index, 1)
 }
 
-const toggleStringItem = (key: 'brands', value: string): void => {
+const toggleStringItem = (key: StringFilterKey, value: string): void => {
   const collection = state[key]
   const index = collection.indexOf(value)
 
@@ -160,53 +177,156 @@ const toggleStringItem = (key: 'brands', value: string): void => {
   collection.splice(index, 1)
 }
 
+const quickFilters: { key: 'isNew' | 'isHit' | 'isSeasonal', label: string }[] = [
+  { key: 'isNew', label: 'Новинки' },
+  { key: 'isHit', label: 'Хіти продажу' },
+  { key: 'isSeasonal', label: 'Сезонна добірка' },
+]
+
+const toggleQuickFilter = (key: 'isNew' | 'isHit' | 'isSeasonal'): void => {
+  state[key] = !state[key]
+}
+
 const isNumberSelected = (key: 'colors' | 'sizes', value: number): boolean => state[key].includes(value)
-const isStringSelected = (key: 'brands', value: string): boolean => state[key].includes(value)
+const isStringSelected = (key: StringFilterKey, value: string): boolean => state[key].includes(value)
+
+const seasonLabel = (value: string): string => SEASON_LABELS[value] ?? value
+
+interface DragScrollState {
+  element: HTMLElement
+  pointerId: number
+  startX: number
+  startY: number
+  scrollLeft: number
+  isDragging: boolean
+}
+
+const dragScrollState = shallowRef<DragScrollState | null>(null)
+let suppressClickUntil = 0
+
+const getFilterValuesElement = (target: EventTarget | null): HTMLElement | null => {
+  if (!(target instanceof Element)) return null
+
+  return target.closest<HTMLElement>('.catalog-filter-values')
+}
+
+const stopDragScroll = (): void => {
+  dragScrollState.value?.element.classList.remove('is-dragging')
+  dragScrollState.value = null
+  document.removeEventListener('pointermove', onDocumentPointerMove)
+  document.removeEventListener('pointerup', onDocumentPointerUp)
+  document.removeEventListener('pointercancel', onDocumentPointerUp)
+}
+
+const onDocumentPointerMove = (event: PointerEvent): void => {
+  const dragState = dragScrollState.value
+  if (!dragState || event.pointerId !== dragState.pointerId) return
+
+  const deltaX = event.clientX - dragState.startX
+  const deltaY = event.clientY - dragState.startY
+
+  if (!dragState.isDragging) {
+    if (Math.abs(deltaX) <= 4 || Math.abs(deltaX) <= Math.abs(deltaY)) return
+
+    dragState.isDragging = true
+    dragState.element.classList.add('is-dragging')
+  }
+
+  event.preventDefault()
+  dragState.element.scrollLeft = dragState.scrollLeft - deltaX
+}
+
+const onDocumentPointerUp = (event: PointerEvent): void => {
+  const dragState = dragScrollState.value
+  if (!dragState || event.pointerId !== dragState.pointerId) return
+
+  if (dragState.isDragging) {
+    suppressClickUntil = window.performance.now() + 350
+  }
+
+  stopDragScroll()
+}
+
+const onFilterValuesPointerDown = (event: PointerEvent): void => {
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+
+  const element = getFilterValuesElement(event.target)
+  if (!element || element.scrollWidth <= element.clientWidth) return
+
+  dragScrollState.value = {
+    element,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    scrollLeft: element.scrollLeft,
+    isDragging: false,
+  }
+
+  document.addEventListener('pointermove', onDocumentPointerMove, { passive: false })
+  document.addEventListener('pointerup', onDocumentPointerUp)
+  document.addEventListener('pointercancel', onDocumentPointerUp)
+}
+
+const onFilterValuesClick = (event: MouseEvent): void => {
+  if (window.performance.now() > suppressClickUntil || !getFilterValuesElement(event.target)) return
+
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+onBeforeUnmount(stopDragScroll)
 </script>
 
 <template>
-  <BAccordion :items="accordionItems" multiple>
+  <BAccordion
+      :items="accordionItems"
+      class="catalog-filter-accordion"
+      multiple
+      :default-open="['quick']"
+      @click.capture="onFilterValuesClick"
+      @pointerdown.capture="onFilterValuesPointerDown"
+  >
     <template #item="{ item }">
-      <template v-if="item.key === 'sort'">
-        <div class="flex gap-2.5 overflow-x-auto scrollbar-none">
+      <template v-if="item.key === 'quick'">
+        <div class="catalog-filter-values flex gap-2.5">
           <button
-              v-for="option in SORT_OPTIONS"
-              :key="option.value"
+              v-for="filter in quickFilters"
+              :key="filter.key"
               type="button"
               class="inline-flex shrink-0 items-center justify-center rounded-full border px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-colors"
-              :class="[
-              state.sort === option.value
-                ? 'border-primary-200 bg-primary-100 text-primary-700'
-                : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100',
-            ]"
-              @click="state.sort = option.value"
+              :class="state[filter.key]
+                ? 'border-primary-500 bg-primary-500 text-white'
+                : 'border-transparent bg-secondary-100 text-secondary-700 hover:bg-primary-100 hover:text-primary-800'"
+              :aria-pressed="state[filter.key]"
+              @click="toggleQuickFilter(filter.key)"
           >
-            {{ option.label }}
+            {{ filter.label }}
           </button>
         </div>
       </template>
 
       <template v-else-if="item.key === 'sizes'">
-        <div class="flex flex-wrap gap-2.5">
+        <div class="catalog-filter-values flex gap-2.5">
           <button
               v-for="size in filtersData.sizes"
               :key="size.id"
               type="button"
-              class="inline-flex min-w-[2.75rem] items-center justify-center rounded-full border px-3.5 py-2 text-sm font-medium transition-colors"
+              class="inline-flex min-w-[2.75rem] shrink-0 items-center justify-center rounded-full border px-3.5 py-2 text-sm font-medium transition-colors"
               :class="[
               isNumberSelected('sizes', size.id)
-                ? 'border-primary-200 bg-primary-100 text-primary-700'
-                : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100',
+                ? 'border-primary-500 bg-primary-500 text-white'
+                : 'border-transparent bg-secondary-100 text-secondary-700 hover:bg-primary-100 hover:text-primary-800',
             ]"
               @click="toggleNumberItem('sizes', size.id)"
           >
             {{ size.name }}
+            <span class="ml-1.5 text-xs opacity-70">{{ size.count }}</span>
           </button>
         </div>
       </template>
 
       <template v-else-if="item.key === 'colors'">
-        <div class="flex gap-2.5 overflow-x-auto scrollbar-none">
+        <div class="catalog-filter-values flex gap-2.5">
           <button
               v-for="color in filtersData.colors"
               :key="color.id"
@@ -214,8 +334,8 @@ const isStringSelected = (key: 'brands', value: string): boolean => state[key].i
               class="inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-colors"
               :class="[
               isNumberSelected('colors', color.id)
-                ? 'border-primary-200 bg-primary-50 text-primary-700'
-                : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100',
+                ? 'border-primary-500 bg-primary-500 text-white'
+                : 'border-transparent bg-secondary-100 text-secondary-700 hover:bg-primary-100 hover:text-primary-800',
             ]"
               @click="toggleNumberItem('colors', color.id)"
           >
@@ -224,25 +344,67 @@ const isStringSelected = (key: 'brands', value: string): boolean => state[key].i
                 :style="{ backgroundColor: color.hexCode || '#ffffff' }"
             />
             {{ color.name }}
+            <span class="text-xs opacity-70">{{ color.count }}</span>
           </button>
         </div>
       </template>
 
       <template v-else-if="item.key === 'brands'">
-        <div class="flex flex-wrap gap-2.5">
+        <div class="catalog-filter-values flex gap-2.5">
           <button
               v-for="brand in filtersData.brands"
               :key="brand.value"
               type="button"
-              class="inline-flex min-w-0 max-w-full items-center justify-center rounded-full border px-3.5 py-2 text-sm font-medium transition-colors"
+              class="inline-flex max-w-full shrink-0 items-center justify-center rounded-full border px-3.5 py-2 text-sm font-medium transition-colors"
               :class="[
               isStringSelected('brands', brand.value)
-                ? 'border-primary-200 bg-primary-50 text-primary-700'
-                : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100',
+                ? 'border-primary-500 bg-primary-500 text-white'
+                : 'border-transparent bg-secondary-100 text-secondary-700 hover:bg-primary-100 hover:text-primary-800',
             ]"
               @click="toggleStringItem('brands', brand.value)"
           >
             <span class="truncate">{{ brand.value }}</span>
+            <span class="ml-1.5 text-xs opacity-70">{{ brand.count }}</span>
+          </button>
+        </div>
+      </template>
+
+      <template v-else-if="item.key === 'seasons'">
+        <div class="catalog-filter-values flex gap-2.5">
+          <button
+              v-for="season in filtersData.seasons"
+              :key="season.value"
+              type="button"
+              class="inline-flex max-w-full shrink-0 items-center justify-center rounded-full border px-3.5 py-2 text-sm font-medium transition-colors"
+              :class="[
+              isStringSelected('seasons', season.value)
+                ? 'border-primary-500 bg-primary-500 text-white'
+                : 'border-transparent bg-secondary-100 text-secondary-700 hover:bg-primary-100 hover:text-primary-800',
+            ]"
+              @click="toggleStringItem('seasons', season.value)"
+          >
+            <span class="truncate">{{ seasonLabel(season.value) }}</span>
+            <span class="ml-1.5 text-xs opacity-70">{{ season.count }}</span>
+          </button>
+        </div>
+      </template>
+
+      <template v-else-if="item.key === 'materials'">
+        <div class="catalog-filter-values flex gap-2.5">
+          <button
+              v-for="material in filtersData.materials"
+              :key="material.value"
+              type="button"
+              class="inline-flex max-w-full shrink-0 items-center justify-center rounded-full border px-3.5 py-2 text-sm font-medium transition-colors"
+              :class="[
+              isStringSelected('materials', material.value)
+                ? 'border-primary-500 bg-primary-500 text-white'
+                : 'border-transparent bg-secondary-100 text-secondary-700 hover:bg-primary-100 hover:text-primary-800',
+            ]"
+              @click="toggleStringItem('materials', material.value)"
+          >
+            <span class="truncate">{{ material.value }}</span>
+            <span class="ml-1.5 text-xs opacity-70">{{ material.count }}</span>
           </button>
         </div>
       </template>

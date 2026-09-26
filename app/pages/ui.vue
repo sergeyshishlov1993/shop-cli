@@ -189,7 +189,7 @@ const previewUrl = computed(() => {
       <h2 class="text-xl font-semibold text-secondary-900">BInput — Phone</h2>
       <b-input v-model="inputPhone" mode="phone" label="Телефон" />
       <b-input model-value="" mode="phone" label="З помилкою" error="Невірний формат" required />
-      <b-input model-value="+38 (067) 123-45-67" mode="phone" label="Disabled" disabled />
+      <b-input model-value="+380 67 123 45 67" mode="phone" label="Disabled" disabled />
       <p class="text-sm text-secondary-600">Значення: {{ inputPhone }}</p>
     </section>
 

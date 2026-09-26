@@ -1,4 +1,6 @@
 import { getAccessToken, setAccessToken as setApiAccessToken } from '~/plugins/api'
+import { authApi } from '~/modules/auth/authApi'
+import { useCartStore } from '~/modules/cart/cartStore'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -71,17 +73,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function handleGoogleCallback(code: string) {
-    isLoading.value = true
-    try {
-      const response = await authApi.googleCallback(code)
-      await onAuthSuccess(response.accessToken)
-    }
-    finally {
-      isLoading.value = false
-    }
-  }
-
   async function logout() {
     isLoading.value = true
     try {
@@ -106,7 +97,6 @@ export const useAuthStore = defineStore('auth', () => {
     fetchProfile,
     login,
     register,
-    handleGoogleCallback,
     logout,
   }
 })

@@ -2,12 +2,12 @@ import type { SortOption } from './components/CatalogFiltersContent.vue'
 
 export interface CatalogQuery {
   category?: string
-  productType?: ProductType
-  size?: number
-  color?: number
-  brand?: string
-  season?: string
-  material?: string
+  productType?: ProductType[]
+  size?: number[]
+  color?: number[]
+  brand?: string[]
+  season?: string[]
+  material?: string[]
   priceMin?: number
   priceMax?: number
   isNew?: boolean
@@ -40,5 +40,18 @@ export const catalogApi = {
   getCategories() {
     const { $api } = useNuxtApp()
     return $api<Category[]>('/storefront/categories')
+  },
+
+  getSizeChart(categoryId: number) {
+    const { $api } = useNuxtApp()
+    return $api<SizeChart>(`/storefront/categories/${categoryId}/size-chart`)
+  },
+
+  subscribeStock(productId: number, email: string) {
+    const { $api } = useNuxtApp()
+    return $api<{ subscribed: boolean }>('/storefront/stock-notifications', {
+      method: 'POST',
+      body: { productId, email },
+    })
   },
 }

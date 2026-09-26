@@ -27,6 +27,7 @@ export const useCartStore = defineStore('cart', () => {
         try {
             const response = await cartApi.addItem({ variantId, quantity })
             cart.value = response
+            useAnalytics().track('add_to_cart', { variantId, quantity })
             return response
         } finally {
             isLoading.value = false

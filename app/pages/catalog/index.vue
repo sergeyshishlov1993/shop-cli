@@ -7,6 +7,7 @@ import CategoryNav from '~/modules/catalog/components/CategoryNav.vue'
 const {
   products,
   filters,
+  totalCount,
   totalPages,
   loading,
   params,
@@ -16,6 +17,13 @@ const {
   resetFilters,
 } = useProductList()
 
+const mobileColumns = useLocalStorage<1 | 2>('catalog-mobile-columns', 2, { initOnMounted: true })
+
+// Пошук у тулбарі каталогу (десктоп): оновлює ?search= з невеликою затримкою
+const searchQuery = ref(params.search ?? '')
+const applySearch = useDebounceFn((value: string) => setFilter('search', value.trim() || undefined), 400)
+watch(searchQuery, applySearch)
+
 useHead({
   title: 'Каталог',
   meta: [{ name: 'description', content: 'Каталог товарів нашого магазину' }],
@@ -23,26 +31,43 @@ useHead({
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-6">
-    <BBreadcrumbs :items="[{ label: 'Головна', to: '/' }, { label: 'Каталог' }]" />
+  <div class="store-page store-container py-3 sm:py-4 lg:py-8">
+    <div class="max-lg:text-xs max-lg:text-secondary-400 max-lg:[&_*]:!text-xs"><BBreadcrumbs :items="[{ label: 'Головна', to: '/' }, { label: 'Каталог' }]" /></div>
 
-    <h1 class="mt-4 mb-6 text-2xl font-bold text-gray-900">Каталог</h1>
+    <h1 class="store-title mb-3 mt-2 text-xl font-medium text-gray-900 lg:mb-8 lg:mt-7 lg:text-3xl lg:font-normal">{{ params.search ? `Пошук: «${params.search}»` : 'Каталог' }}</h1>
 
     <div class="flex gap-6">
-      <aside class="hidden lg:block w-64 shrink-0">
-        <CategoryNav class="mb-6" />
-        <CatalogFilters
-          v-if="filters"
-          :filters="filters"
-          :params="params"
-          @update:filter="setFilter"
-          @reset="resetFilters"
-        />
+      <aside class="hidden w-64 shrink-0 lg:block">
+        <div class="catalog-sidebar-scroll sticky top-28 max-h-[calc(100dvh-20rem)] overflow-x-hidden overflow-y-scroll overscroll-contain pr-3">
+          <CategoryNav class="mb-6" />
+          <CatalogFilters
+            v-if="filters"
+            :filters="filters"
+            :params="params"
+            @update:filter="setFilter"
+            @reset="resetFilters"
+          />
+        </div>
       </aside>
 
       <div class="flex-1 min-w-0">
-        <div class="flex items-center justify-between mb-4 gap-4">
-          <div class="lg:hidden">
+        <div class="mb-3 flex flex-row items-center justify-between gap-3 lg:mb-4 lg:items-end lg:gap-4">
+          <div class="flex items-center gap-1 md:hidden" role="group" aria-label="Вигляд каталогу">
+            <button
+              v-for="columns in [1, 2] as const"
+              :key="columns"
+              type="button"
+              class="inline-flex size-9 items-center justify-center transition-opacity"
+              :class="mobileColumns === columns ? 'text-secondary-900' : 'text-secondary-400'"
+              :aria-label="columns === 1 ? 'Одна колонка' : 'Дві колонки'"
+              :aria-pressed="mobileColumns === columns"
+              @click="mobileColumns = columns"
+            >
+              <Icon :name="columns === 1 ? 'lucide:square' : 'lucide:columns-2'" size="22" />
+            </button>
+          </div>
+          <span class="ml-auto text-xs text-secondary-500 lg:hidden">{{ totalCount }} товарів</span>
+          <div class="shrink-0 lg:hidden">
             <CatalogFilters
               v-if="filters"
               :filters="filters"
@@ -52,7 +77,13 @@ useHead({
               @reset="resetFilters"
             />
           </div>
-          <CatalogSort :model-value="params.sort" @update:model-value="setSort" />
+          <div class="flex w-full items-center justify-between gap-4 max-lg:!hidden">
+            <CatalogSort :model-value="params.sort" @update:model-value="setSort" />
+            <label class="glass flex h-11 w-72 shrink-0 items-center gap-2 rounded-full px-4 text-sm">
+              <Icon name="lucide:search" size="18" class="text-secondary-500" />
+              <input v-model="searchQuery" type="search" placeholder="Пошук у каталозі" class="min-w-0 flex-1 bg-transparent outline-none placeholder:text-secondary-400" aria-label="Пошук у каталозі">
+            </label>
+          </div>
         </div>
 
         <ProductGrid

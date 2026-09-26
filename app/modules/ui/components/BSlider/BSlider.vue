@@ -1,351 +1,242 @@
-<script lang="ts" setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+<script setup lang="ts">
 import type { SwiperContainer } from 'swiper/element'
-
-type SliderMode = 'hero' | 'product' | 'gallery'
+import { useMediaQuery } from '@vueuse/core'
 
 type Props = {
-  items: ProductMedia[]
-  mode?: SliderMode
-  alt?: string
-  initialIndex?: number
-  autoplay?: boolean
-  interval?: number
-  aspectRatio?: string
-  loop?: boolean
+  slidesPerView?: number | 'auto'
   withBtns?: boolean
+  isRemoveBtns?: boolean
+  step?: number | string
+  gap?: number | string
   noBlur?: boolean
+  swiping?: boolean
+  scrollStep?: number
   speed?: number
+  withKeyboard?: boolean
 }
 
 type Emits = {
-  (e: 'open-gallery', index: number): void
-  (e: 'slide-change', index: number): void
-  (e: 'close'): void
+  (e: 'slide-changed', index: number): void
+  (e: 'reach-end'): void
 }
 
+const modelValue = defineModel<number | undefined>({ default: 0 })
 const props = withDefaults(defineProps<Props>(), {
-  mode: 'product',
-  alt: '',
-  initialIndex: 0,
-  autoplay: false,
-  interval: 5000,
-  aspectRatio: '3/4',
-  loop: true,
+  slidesPerView: 'auto',
   withBtns: false,
+  isRemoveBtns: false,
+  gap: 5,
   noBlur: false,
+  swiping: true,
+  scrollStep: 1,
   speed: 300,
+  withKeyboard: false,
 })
-
-const emits = defineEmits<Emits>()
+const emit = defineEmits<Emits>()
 
 const containerRef = ref<SwiperContainer | null>(null)
-const thumbsContainerRef = ref<SwiperContainer | null>(null)
-const rightTargetIsVisible = ref(false)
-const leftTargetIsVisible = ref(false)
+const atBeginning = ref(true)
+const atEnd = ref(false)
+const isDesktop = useMediaQuery('(min-width: 769px)')
+let reachEndLocked = false
+let reachEndTimer: ReturnType<typeof setTimeout> | undefined
 
 const swiper = useSwiper(containerRef, {
-  loop: props.loop,
-  initialSlide: props.initialIndex,
-  autoplay: props.autoplay ? { delay: props.interval, disableOnInteraction: false } : false,
-  thumbs: props.mode === 'product' ? { swiper: thumbsContainerRef.value } : undefined,
+  allowSlideNext: props.swiping,
+  allowSlidePrev: props.swiping,
 })
 
-const thumbsSwiper = useSwiper(thumbsContainerRef, {
-  slidesPerView: 'auto',
-  spaceBetween: 8,
-  watchSlidesProgress: true,
-})
-
-const imageFit = computed(() => (props.mode === 'gallery' ? 'contain' : 'cover'))
-const effectiveAspectRatio = computed(() => (props.mode === 'gallery' ? 'auto' : props.aspectRatio))
-
-function onRightIntersectionObserver([{ isIntersecting }]: IntersectionObserverEntry[]) {
-  rightTargetIsVisible.value = isIntersecting
+function updateEdges() {
+  const instance = swiper.instance.value
+  if (!instance) return
+  atBeginning.value = instance.isBeginning
+  atEnd.value = instance.isEnd
 }
 
-function onLeftIntersectionObserver([{ isIntersecting }]: IntersectionObserverEntry[]) {
-  leftTargetIsVisible.value = isIntersecting
+function handleSlideChange() {
+  const instance = swiper.instance.value
+  if (!instance) return
+
+  const index = instance.activeIndex ?? 0
+  updateEdges()
+
+  if (modelValue.value !== index) modelValue.value = index
+  emit('slide-changed', index)
+}
+
+function handleProgress() {
+  const instance = swiper.instance.value
+  if (!instance) return
+
+  updateEdges()
+
+  if ((instance.progress ?? 0) > 0.85 && !reachEndLocked) {
+    reachEndLocked = true
+    emit('reach-end')
+    reachEndTimer = setTimeout(() => { reachEndLocked = false }, 1000)
+  }
 }
 
 function scrollByStep(direction: 'prev' | 'next') {
   const instance = swiper.instance.value
   if (!instance) return
-  direction === 'prev' ? instance.slidePrev(props.speed) : instance.slideNext(props.speed)
+
+  const delta = direction === 'prev' ? -props.scrollStep : props.scrollStep
+  instance.slideTo(Math.max(0, instance.activeIndex + delta), props.speed)
 }
 
-function onSlideClick(index: number) {
-  if (props.mode === 'product') emits('open-gallery', index)
+function handleKeydown(event: KeyboardEvent) {
+  if (!props.withKeyboard) return
+  if (event.key === 'ArrowRight') scrollByStep('next')
+  else if (event.key === 'ArrowLeft') scrollByStep('prev')
 }
+
+watch(modelValue, (index) => {
+  const instance = swiper.instance.value
+  if (index !== undefined && instance && instance.activeIndex !== index) {
+    instance.slideTo(index, props.speed)
+  }
+})
 
 onMounted(() => {
-  nextTick(() => {
-    if (props.initialIndex && swiper.instance.value) {
-      swiper.instance.value.slideTo(props.initialIndex, 0)
-    }
+  window.addEventListener('keydown', handleKeydown)
 
-    swiper.instance.value?.on('slideChange', () => {
-      emits('slide-change', swiper.instance.value?.realIndex ?? 0)
-    })
+  nextTick(() => {
+    const instance = swiper.instance.value
+    if (!instance) return
+    if (modelValue.value) instance.slideTo(modelValue.value, 0)
+    instance.on('slideChange', handleSlideChange)
+    instance.on('progress', handleProgress)
+    instance.on('resize', updateEdges)
+    updateEdges()
   })
 })
 
 onBeforeUnmount(() => {
-  swiper.instance.value?.off('slideChange')
+  window.removeEventListener('keydown', handleKeydown)
+  if (reachEndTimer) clearTimeout(reachEndTimer)
+  swiper.instance.value?.off('slideChange', handleSlideChange)
+  swiper.instance.value?.off('progress', handleProgress)
+  swiper.instance.value?.off('resize', updateEdges)
 })
 </script>
 
 <template>
   <div
-      :class="{
-      'b-slider': true,
-      [`b-slider--${mode}`]: true,
-      'b-slider--prev': !leftTargetIsVisible && !noBlur,
-      'b-slider--next': !rightTargetIsVisible && !noBlur,
+    class="b-slider"
+    :class="{
+      'b-slider--prev': !atBeginning && !noBlur,
+      'b-slider--next': !atEnd && !noBlur,
     }"
   >
-    <button
-        v-if="mode === 'gallery'"
-        class="b-slider__close"
-        @click="emits('close')"
-    >
-      <b-icon name="icon-close" />
-    </button>
-
-    <client-only>
+    <ClientOnly>
       <swiper-container
-          ref="containerRef"
-          class="b-slider__main"
-          :style="{ aspectRatio: effectiveAspectRatio }"
-          :loop="loop"
-          :initial-slide="initialIndex"
-          :autoplay="autoplay ? { delay: interval, disableOnInteraction: false } : false"
-          v-bind="$attrs"
+        ref="containerRef"
+        class="b-slider__inner"
+        :slides-per-view="slidesPerView"
+        :space-between="gap"
+        touch-events-target="container"
+        v-bind="$attrs"
       >
-        <div
-            v-intersection-observer="onLeftIntersectionObserver"
-            class="b-slider__inner-target b-slider__inner-target--left"
-        />
-
-        <swiper-slide
-            v-for="(item, index) in items"
-            :key="item.id"
-            class="b-slider__slide"
-            :class="{ 'b-slider__slide--zoomable': mode === 'product' }"
-            @click="onSlideClick(index)"
-        >
-          <template v-if="item.mediaType === 'VIDEO'">
-            <video
-                class="b-slider__image"
-                :style="{ objectFit: imageFit }"
-                autoplay
-                muted
-                loop
-                playsinline
-            >
-              <source :src="getFileUrl(item.file)" />
-            </video>
-          </template>
-          <template v-else>
-            <img
-                :src="getFileUrl(item.file, mode === 'gallery' ? 'large' : 'medium')"
-                :alt="alt || `Slide ${index + 1}`"
-                class="b-slider__image"
-                :style="{ objectFit: imageFit }"
-            />
-          </template>
-        </swiper-slide>
-
-        <div
-            v-intersection-observer="onRightIntersectionObserver"
-            class="b-slider__inner-target b-slider__inner-target--right"
-        />
+        <slot />
       </swiper-container>
 
-      <swiper-container
-          v-if="mode === 'product'"
-          ref="thumbsContainerRef"
-          class="b-slider__thumbs"
-          slides-per-view="auto"
-          :space-between="8"
-          watch-slides-progress
+      <BBtn
+        v-if="withBtns && isDesktop && (!isRemoveBtns || !atBeginning)"
+        variant="icon"
+        type="button"
+        class="b-slider__btn b-slider__btn--prev"
+        :class="{ 'b-slider__btn--hidden': atBeginning }"
+        aria-label="Попередній слайд"
+        @click.stop="scrollByStep('prev')"
       >
-        <swiper-slide
-            v-for="(item, index) in items"
-            :key="item.id"
-            class="b-slider__thumb"
-        >
-          <img
-              :src="getFileUrl(item.file, 'thumb')"
-              :alt="alt || `Thumb ${index + 1}`"
-              class="b-slider__thumb-image"
-          />
-        </swiper-slide>
-      </swiper-container>
+        <Icon name="lucide:chevron-left" size="20" />
+      </BBtn>
 
-      <b-btn
-          v-if="withBtns && items.length > 1 && $viewport.isGreaterThan('mobile')"
-          variant="icon"
-          class="b-slider__btn b-slider__btn--prev"
-          :class="{ 'b-slider__btn--hidden': leftTargetIsVisible }"
-          @click.stop="scrollByStep('prev')"
+      <BBtn
+        v-if="withBtns && isDesktop && (!isRemoveBtns || !atEnd)"
+        variant="icon"
+        type="button"
+        class="b-slider__btn b-slider__btn--next"
+        :class="{ 'b-slider__btn--hidden': atEnd }"
+        aria-label="Наступний слайд"
+        @click.stop="scrollByStep('next')"
       >
-        <b-icon name="icon-left" />
-      </b-btn>
-
-      <b-btn
-          v-if="withBtns && items.length > 1 && $viewport.isGreaterThan('mobile')"
-          variant="icon"
-          class="b-slider__btn b-slider__btn--next"
-          :class="{ 'b-slider__btn--hidden': rightTargetIsVisible }"
-          @click.stop="scrollByStep('next')"
-      >
-        <b-icon name="icon-right" />
-      </b-btn>
-    </client-only>
+        <Icon name="lucide:chevron-right" size="20" />
+      </BBtn>
+    </ClientOnly>
   </div>
 </template>
 
 <style scoped>
 .b-slider {
   position: relative;
-  user-select: none;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  gap: 15px;
+  user-select: none;
 }
 
-.b-slider--gallery {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.95);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 16px;
+.b-slider--prev::before,
+.b-slider--next::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 50px;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.2s ease;
 }
 
 .b-slider--prev::before {
-  content: "";
-  position: absolute;
-  top: 0;
   left: 0;
-  bottom: 0;
-  width: 50px;
-  background: linear-gradient(90deg, var(--color-secondary-50) 0%, rgba(255, 255, 255, 0) 100%);
-  z-index: 2;
-  opacity: 1;
-  pointer-events: none;
-  transition: all 0.2s;
+  background: linear-gradient(90deg, #fff 0%, rgba(255, 255, 255, 0) 100%);
 }
 
 .b-slider--next::after {
-  content: "";
-  position: absolute;
-  top: 0;
   right: 0;
-  bottom: 0;
-  width: 50px;
-  background: linear-gradient(270deg, var(--color-secondary-50) 0%, rgba(255, 255, 255, 0) 100%);
-  z-index: 2;
-  opacity: 1;
-  pointer-events: none;
-  transition: all 0.2s;
+  background: linear-gradient(270deg, #fff 0%, rgba(255, 255, 255, 0) 100%);
 }
 
-.b-slider__main {
+.b-slider__inner {
   position: relative;
-  width: 100%;
-  border-radius: 8px;
-  background: var(--color-secondary-100);
-  overflow: hidden;
-}
-
-.b-slider--gallery .b-slider__main {
-  height: 100%;
-  background: transparent;
-  border-radius: 0;
-}
-
-.b-slider__slide {
-  height: 100%;
-}
-
-.b-slider__slide--zoomable {
-  cursor: zoom-in;
-}
-
-.b-slider__image {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.b-slider__close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 3;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
-  color: var(--color-secondary-50);
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.b-slider__close:hover {
-  background: rgba(0, 0, 0, 0.75);
-}
-
-.b-slider__thumbs {
   width: 100%;
-  height: 64px;
+  min-width: 0;
   overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  scrollbar-width: none;
 }
 
-.b-slider__thumb {
-  width: 72px !important;
-  height: 64px;
-  flex-shrink: 0;
-  border-radius: 6px;
-  overflow: hidden;
-  border: 2px solid transparent;
-  opacity: 0.55;
-  cursor: pointer;
-  transition: opacity 0.2s, border-color 0.2s;
-  background: var(--color-secondary-100);
+.b-slider__inner:active {
+  cursor: grabbing;
 }
 
-.b-slider__thumb:hover {
-  opacity: 0.8;
-}
-
-:deep(.swiper-slide-thumb-active.b-slider__thumb) {
-  opacity: 1;
-  border-color: var(--color-primary-500);
-}
-
-.b-slider__thumb-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+.b-slider__inner::-webkit-scrollbar {
+  display: none;
 }
 
 .b-slider__btn {
-  position: absolute;
-  border: 1px solid var(--color-secondary-300) !important;
+  position: absolute !important;
   top: 50%;
-  transform: translateY(-50%);
-  box-shadow: 0 5px 10px 0 rgba(0, 0, 0, 0.05);
   z-index: 10;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  transform: translateY(-50%);
+  border: 1px solid rgba(17, 17, 17, 0.12) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: #111 !important;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.08);
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+}
+
+.b-slider__btn:hover {
+  transform: translateY(-50%) scale(1.04);
 }
 
 .b-slider__btn--prev {
@@ -359,30 +250,5 @@ onBeforeUnmount(() => {
 .b-slider__btn--hidden {
   opacity: 0;
   pointer-events: none;
-}
-
-.b-slider__inner-target {
-  position: absolute;
-}
-
-.b-slider__inner-target--left {
-  left: 0;
-}
-
-.b-slider__inner-target--right {
-  position: relative;
-  right: 0;
-  transform: translateX(-30px);
-}
-
-@media (max-width: 768px) {
-  .b-slider__thumbs {
-    height: 52px;
-  }
-
-  .b-slider__thumb {
-    width: 56px !important;
-    height: 52px;
-  }
 }
 </style>
