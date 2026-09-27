@@ -25,6 +25,7 @@ test('add to cart and place a courier order', async ({ page, request }) => {
   const drawer = page.getByRole('dialog').filter({ hasText: 'Кошик' })
   await expect(drawer.getByRole('link', { name: 'Оформити замовлення' }).or(drawer.getByRole('button', { name: 'Оформити замовлення' })).first()).toBeVisible()
   await expect(drawer.getByText('Разом')).toBeVisible()
+  await expect(page.getByTestId('product-toast')).toContainText('Товар додано в кошик')
 
   await page.goto('/cart')
   await expect(page.getByRole('link', { name: /Оформ/ }).or(page.getByRole('button', { name: /Оформ/ })).first()).toBeVisible()
@@ -50,4 +51,17 @@ test('add to cart and place a courier order', async ({ page, request }) => {
   await page.getByRole('button', { name: 'Підтвердити замовлення' }).click()
   await expect(page.getByText('Замовлення оформлено')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText(/Номер замовлення: \S+/)).toBeVisible()
+})
+
+// Каталог: кнопка на картці → модалка з уже обраним розміром → тост, шторка не відкривається
+test('quick add from catalog card shows toast', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('cookie-consent', 'necessary'))
+  await page.goto('/catalog')
+  await page.locator('.product-card').getByRole('button', { name: 'Додати в кошик' }).first().click()
+  const modal = page.getByRole('dialog').filter({ hasText: 'Оберіть варіант' })
+  const add = modal.getByRole('button', { name: 'Додати в кошик' })
+  await expect(add).toBeEnabled()
+  await add.click()
+  await expect(page.getByTestId('product-toast')).toContainText('Товар додано в кошик')
+  await expect(page.getByRole('dialog').filter({ hasText: 'Разом' })).toHaveCount(0)
 })

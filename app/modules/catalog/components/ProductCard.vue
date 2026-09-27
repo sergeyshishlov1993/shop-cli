@@ -82,10 +82,20 @@ type CardExtras = { sizes?: { variantId: number; name: string; available: boolea
 const extras = computed(() => props.product as ProductListItem & CardExtras)
 const cardSizes = computed(() => extras.value.sizes ?? [])
 
-async function addVariant(variantId: number) {
+function showAdded(meta: (string | null | undefined)[], price: number) {
+  toast.product({
+    image: getFileUrl(props.product.mainImage, 'thumb') || null,
+    title: 'Товар додано в кошик',
+    name: props.product.name,
+    meta: meta.filter(Boolean).join(' · ') || null,
+    price,
+  })
+}
+
+async function addVariant(variantId: number, sizeName?: string) {
   try {
     await cartStore.addToCart(variantId, 1)
-    cartStore.isDrawerOpen = true
+    showAdded([sizeName], props.product.effectivePrice)
   }
   catch {
     toast.error('Не вдалося додати товар у кошик')
@@ -131,18 +141,13 @@ async function openQuickAdd() {
   try {
     productDetail.value = await catalogApi.getProductBySlug(props.product.slug)
 
-    if (colors.value[0]) selectedColor.value = colors.value[0].id
-
-    const sizeNames = new Set(variants.value.map(v => v.size?.name ?? v.sku))
-    if (sizeNames.size === 1) {
-      selectedSizeName.value = [...sizeNames][0] ?? null
-    }
+    // За замовчуванням — перший доступний колір і розмір
+    const firstAvailable = variants.value.find(v => v.availableQty > 0)
+    selectedColor.value = firstAvailable?.color?.id ?? colors.value[0]?.id ?? null
+    const sized = uniqueSizes.value.find(v => v.availableQty > 0)
+    selectedSizeName.value = sized ? (sized.size?.name ?? sized.sku) : null
 
     resolveVariant()
-
-    if (variants.value.length === 1) {
-      selectedVariant.value = variants.value[0] ?? null
-    }
   } finally {
     loadingVariants.value = false
   }
@@ -158,11 +163,12 @@ function closeModal() {
 }
 
 async function addToCart() {
-  if (!selectedVariant.value) return
+  const variant = selectedVariant.value
+  if (!variant) return
   try {
-    await cartStore.addToCart(selectedVariant.value.id, quantity.value)
+    await cartStore.addToCart(variant.id, quantity.value)
     closeModal()
-    cartStore.isDrawerOpen = true
+    showAdded([variant.color?.name, variant.size?.name], variant.price)
   }
   catch {
     toast.error('Не вдалося додати товар у кошик')
@@ -298,7 +304,7 @@ onMounted(() => {
                 type="button"
                 class="min-w-9 rounded-full border border-secondary-300 px-2.5 py-1 text-xs text-secondary-900 transition-colors hover:border-secondary-900 hover:bg-secondary-900 hover:text-white disabled:pointer-events-none disabled:opacity-35 disabled:line-through"
                 :disabled="!size.available || cartStore.isLoading"
-                @click="addVariant(size.variantId)"
+                @click="addVariant(size.variantId, size.name)"
             >
               {{ size.name }}
             </button>
@@ -362,6 +368,11 @@ onMounted(() => {
           {{ product.oldPrice }} ₴
         </span>
       </div>
+
+      <BBtn variant="primary" size="sm" block class="mt-auto" @click="openQuickAdd">
+        <Icon name="lucide:shopping-bag" size="16" />
+        Додати в кошик
+      </BBtn>
     </div>
 
   </div>

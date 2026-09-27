@@ -78,6 +78,24 @@ describe('BToast', () => {
     wrapper.unmount()
   })
 
+  it('renders product toast and opens cart drawer', async () => {
+    const wrapper = await mountSuspended(BToast)
+    useToast().product({ image: '/x.jpg', title: 'Товар додано в кошик', name: 'Сукня', meta: 'Чорний · M', price: 1200 })
+    await nextTick()
+    const el = document.body.querySelector('[data-testid="product-toast"]')!
+    expect(el.querySelector('img')?.getAttribute('src')).toBe('/x.jpg')
+    expect(el.textContent).toContain('Товар додано в кошик')
+    expect(el.textContent).toContain('Чорний · M')
+    expect(el.textContent).toContain('1200 ₴')
+    const link = [...el.querySelectorAll('button')].find(b => b.textContent?.includes('До кошика')) as HTMLButtonElement
+    link.click()
+    await nextTick()
+    const { useCartStore } = await import('~/modules/cart/cartStore')
+    expect(useCartStore().isDrawerOpen).toBe(true)
+    expect(useToast().toasts.value).toHaveLength(0)
+    wrapper.unmount()
+  })
+
   it('auto-dismisses after duration', async () => {
     const wrapper = await mountSuspended(BToast)
     vi.useFakeTimers()

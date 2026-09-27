@@ -12,6 +12,8 @@ const props = withDefaults(defineProps<Props>(), {
   compact: false,
 })
 
+const emit = defineEmits<{ added: [] }>()
+
 const cartStore = useCartStore()
 const toast = useToast()
 const isAdding = ref(false)
@@ -26,6 +28,7 @@ async function handleAdd() {
   try {
     await cartStore.addToCart(props.variantId, 1)
     cartStore.isDrawerOpen = true
+    emit('added')
   } catch {
     toast.error('Не вдалося додати товар у кошик')
   } finally {

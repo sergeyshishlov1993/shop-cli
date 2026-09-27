@@ -82,6 +82,22 @@ const wearWithProducts = computed(() => relatedProducts.value?.wearWith ?? [])
 
 const selectedColorName = computed(() => colors.value.find(c => c.id === selectedColorId.value)?.name ?? null)
 
+// Розмір за замовчуванням — перший доступний для обраного кольору
+watch([selectedColorId, selectedSizeId, sizes], () => {
+  if (!selectedSizeId.value) selectedSizeId.value = sizes.value.find(s => isSizeAvailable(s.id))?.id ?? null
+}, { immediate: true })
+
+function showAddedToast() {
+  if (!product.value) return
+  toast.product({
+    image: getFileUrl(mainMedia.value?.file, 'thumb') || null,
+    title: 'Товар додано в кошик',
+    name: product.value.name,
+    meta: [selectedColorName.value, sizes.value.find(s => s.id === selectedSizeId.value)?.name].filter(Boolean).join(' · ') || null,
+    price: price.value,
+  })
+}
+
 const availabilityLabel = computed(() => {
   if (availability.value === 'IN_STOCK') return 'В наявності'
   if (availability.value === 'LOW_STOCK') return 'Залишилось мало'
@@ -406,7 +422,7 @@ watch(isSizeChartOpen, async (isOpen) => {
 
             <!-- Кнопки покупки в самому блоці: нижня панель з'являється лише після прокрутки фото -->
             <div class="grid grid-cols-2 gap-2 [&_button:disabled]:pointer-events-none" @click="sizes.length && !selectedSizeId && askSize()">
-              <AddToCartBtn compact :variant-id="currentVariant?.id ?? null" :disabled="!isPurchasable" />
+              <AddToCartBtn compact :variant-id="currentVariant?.id ?? null" :disabled="!isPurchasable" @added="showAddedToast" />
               <BBtn variant="outline" :disabled="!isPurchasable" @click="openQuickBuy">Купити в 1 клік</BBtn>
             </div>
 
@@ -497,7 +513,7 @@ watch(isSizeChartOpen, async (isOpen) => {
           <div class="grid min-w-0 flex-1 shrink-0 grid-cols-2 items-center gap-2 md:flex max-md:[&_.b-btn]:!px-2 max-md:[&_.b-btn]:!text-[11px] max-md:[&_.b-btn]:!tracking-normal [&_button:disabled]:pointer-events-none" @click="sizes.length && !selectedSizeId && askSize()">
             <BBtn variant="outline" class="min-w-0 whitespace-nowrap md:w-56" :disabled="!isPurchasable" @click="openQuickBuy">Купити в 1 клік</BBtn>
             <div class="min-w-0 whitespace-nowrap md:w-56">
-              <AddToCartBtn compact :variant-id="currentVariant?.id ?? null" :disabled="!isPurchasable" />
+              <AddToCartBtn compact :variant-id="currentVariant?.id ?? null" :disabled="!isPurchasable" @added="showAddedToast" />
             </div>
           </div>
           </div>

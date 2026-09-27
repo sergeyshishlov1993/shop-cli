@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { useToast } from '~/modules/ui/composables/useToast'
+import { useCartStore } from '~/modules/cart/cartStore'
 
 const { toasts, remove } = useToast()
+const cartStore = useCartStore()
+
+function openCart(id: number) {
+  remove(id)
+  cartStore.isDrawerOpen = true
+}
 
 const timers = new Map<number, ReturnType<typeof setTimeout>>()
 
@@ -50,6 +57,36 @@ onBeforeUnmount(() => {
         <div
           v-for="toast in toasts"
           :key="toast.id"
+          :class="toast.product ? 'pointer-events-auto' : ''"
+        >
+        <div
+          v-if="toast.product"
+          class="flex gap-3 rounded-2xl border border-secondary-100 bg-white/95 p-3 text-secondary-900 shadow-2xl backdrop-blur"
+          role="status"
+          data-testid="product-toast"
+        >
+          <img v-if="toast.product.image" :src="toast.product.image" :alt="toast.product.name" class="h-16 w-12 shrink-0 rounded-lg bg-secondary-100 object-cover">
+          <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+            <p class="flex items-center gap-1.5 text-sm font-semibold">
+              <Icon name="lucide:circle-check" class="size-4 shrink-0 text-emerald-600" />
+              {{ toast.product.title }}
+            </p>
+            <p class="truncate text-xs text-secondary-700">{{ toast.product.name }}</p>
+            <p class="text-xs text-secondary-500">
+              <span v-if="toast.product.meta">{{ toast.product.meta }}</span>
+              <span v-if="toast.product.meta && toast.product.price != null"> · </span>
+              <span v-if="toast.product.price != null" class="font-semibold text-secondary-900">{{ toast.product.price }} ₴</span>
+            </p>
+            <button type="button" class="mt-1 w-fit text-xs font-medium underline underline-offset-4 hover:text-secondary-600" @click="openCart(toast.id)">
+              До кошика
+            </button>
+          </div>
+          <button type="button" class="self-start text-secondary-400 transition-colors hover:text-secondary-900" aria-label="Закрити" @click="remove(toast.id)">
+            <Icon name="lucide:x" class="size-4" />
+          </button>
+        </div>
+        <div
+          v-else
           class="pointer-events-auto flex items-center gap-3 rounded-xl px-4 py-3.5 shadow-xl"
           :class="colorMap[toast.variant]"
           role="status"
@@ -64,6 +101,7 @@ onBeforeUnmount(() => {
           >
             <Icon name="lucide:x" class="size-4" />
           </button>
+        </div>
         </div>
       </TransitionGroup>
     </div>
