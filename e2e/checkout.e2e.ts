@@ -6,25 +6,20 @@ test('add to cart and place a courier order', async ({ page, request }) => {
   const products = await inStockProducts(request)
   expect(products.length).toBeGreaterThan(0)
 
+  await page.addInitScript(() => localStorage.setItem('cookie-consent', 'necessary')) // banner would cover the bottom buy bar
   const addBtn = page.getByRole('button', { name: 'Додати в кошик' }).first()
   let added = false
   for (const p of products.slice(0, 10)) {
     await page.goto(`/product/${p.slug}`)
     await expect(page.locator('h1').first()).toBeVisible()
-    const sizeTrigger = page.locator('button.glass.h-11') // size dropdown trigger
-    if (await sizeTrigger.count()) {
-      await sizeTrigger.click()
-      const n = await page.locator('.glass--strong button').count()
-      for (let i = 0; i < n; i++) {
-        if (i > 0) await sizeTrigger.click()
-        await page.locator('.glass--strong button').nth(i).click()
-        if (await addBtn.isEnabled()) break
-      }
-    }
+    const sizeBtns = page.locator('button[aria-pressed]:not([aria-label]):enabled:not([aria-hidden="true"] *)') // size chips (colors have aria-label)
+    const n = await sizeBtns.count()
+    for (let i = 0; i < n && !(await addBtn.isEnabled()); i++) await sizeBtns.nth(i).click()
     if (await addBtn.isEnabled()) { added = true; break }
   }
   expect(added, 'no purchasable product found').toBe(true)
 
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2)) // buy bar shows after the gallery
   await addBtn.click()
   await expect(page.getByText('Товар додано в кошик')).toBeVisible()
 

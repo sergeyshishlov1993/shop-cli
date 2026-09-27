@@ -2,20 +2,23 @@
 interface Props {
   media: ProductMedia[]
   productName: string
+  editorial?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  editorial: false,
+})
 const activeIndex = ref(0)
 const fullscreenIndex = ref(0)
 const isFullscreen = ref(false)
 const galleryRef = ref<HTMLElement | null>(null)
+const stripRef = ref<HTMLElement | null>(null)
 
 const items = computed(() => [...props.media].sort((a, b) => {
   if (a.isMain && !b.isMain) return -1
   if (!a.isMain && b.isMain) return 1
   return a.sortOrder - b.sortOrder
 }))
-const activeItem = computed(() => items.value[activeIndex.value] ?? null)
 
 watch(items, () => { activeIndex.value = 0 })
 
@@ -43,9 +46,10 @@ function onMainSlideChanged(index: number) {
   scrollToGalleryStart()
 }
 
-function openFullscreen() {
-  if (!activeItem.value) return
-  fullscreenIndex.value = activeIndex.value
+function openFullscreen(index = activeIndex.value) {
+  if (!items.value[index]) return
+  activeIndex.value = index
+  fullscreenIndex.value = index
   isFullscreen.value = true
 }
 
@@ -70,15 +74,65 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="galleryRef" class="product-gallery">
+  <div ref="galleryRef" class="product-gallery" :class="{ 'product-gallery--editorial': editorial }">
     <div v-if="!items.length" class="product-gallery__empty">
       <Icon name="lucide:image" size="42" />
       <span>Немає медіа</span>
     </div>
 
     <template v-else>
+      <!-- Десктоп (editorial): стрічка великих медіа, по 3 в кадрі, зі snap і стрілками -->
+      <div v-if="editorial" class="product-gallery__strip-wrap">
+        <div ref="stripRef" v-drag-scroll class="product-gallery__strip">
+          <div
+            v-for="(item, index) in items"
+            :key="item.id"
+            class="product-gallery__tile"
+            role="button"
+            tabindex="0"
+            :aria-label="`Відкрити медіа ${index + 1} на весь екран`"
+            @click="openFullscreen(index)"
+            @keydown.enter.prevent="openFullscreen(index)"
+            @keydown.space.prevent="openFullscreen(index)"
+          >
+            <iframe
+              v-if="item.externalUrl"
+              :src="getInstagramEmbedUrl(item.externalUrl) ?? undefined"
+              class="product-gallery__tile-asset"
+              loading="lazy"
+              :title="`${productName} — Instagram`"
+            />
+            <video
+              v-else-if="item.mediaType === 'VIDEO'"
+              :src="getFileUrl(item.file)"
+              class="product-gallery__tile-asset"
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="metadata"
+            />
+            <img
+              v-else
+              :src="getFileUrl(item.file, 'large')"
+              :alt="`${productName} — фото ${index + 1}`"
+              class="product-gallery__tile-asset"
+              :style="{ objectPosition: focalPosition(item.focalX, item.focalY) }"
+            />
+          </div>
+        </div>
+        <template v-if="items.length > 3">
+          <BBtn variant="icon" class="product-gallery__arrow product-gallery__arrow--prev" aria-label="Попередні" @click="stripRef?.scrollBy({ left: -stripRef.clientWidth / 3, behavior: 'smooth' })">
+            <Icon name="lucide:chevron-left" size="20" />
+          </BBtn>
+          <BBtn variant="icon" class="product-gallery__arrow product-gallery__arrow--next" aria-label="Наступні" @click="stripRef?.scrollBy({ left: stripRef.clientWidth / 3, behavior: 'smooth' })">
+            <Icon name="lucide:chevron-right" size="20" />
+          </BBtn>
+        </template>
+      </div>
+
       <!-- Десктоп: вертикальна стрічка мініатюр праворуч від фото -->
-      <div class="product-gallery__rail" role="list">
+      <div v-if="!editorial" class="product-gallery__rail" role="list">
         <button
           v-for="(item, index) in items"
           :key="item.id"
@@ -107,7 +161,7 @@ onBeforeUnmount(() => {
         @slide-changed="onMainSlideChanged"
       >
         <swiper-slide v-for="(item, index) in items" :key="item.id">
-          <button type="button" class="product-gallery__media" :aria-label="`Відкрити медіа ${index + 1} на весь екран`" @click="openFullscreen">
+          <button type="button" class="product-gallery__media" :aria-label="`Відкрити медіа ${index + 1} на весь екран`" @click="openFullscreen()">
             <iframe
               v-if="item.externalUrl"
               :src="getInstagramEmbedUrl(item.externalUrl) ?? undefined"
@@ -552,6 +606,62 @@ onBeforeUnmount(() => {
   display: none;
 }
 
+.product-gallery__strip-wrap {
+  position: relative;
+  display: none;
+}
+
+.product-gallery__strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 8px) / 3);
+  gap: 4px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.product-gallery__tile {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--color-secondary-100);
+  cursor: zoom-in;
+  scroll-snap-align: start;
+}
+
+.product-gallery__tile:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: -3px;
+}
+
+.product-gallery__tile-asset {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+iframe.product-gallery__tile-asset {
+  pointer-events: auto;
+}
+
+.product-gallery__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.product-gallery__arrow--prev {
+  left: 16px;
+}
+
+.product-gallery__arrow--next {
+  right: 16px;
+}
+
 @media (min-width: 1024px) {
   /* Мініатюри праворуч від фото */
   .product-gallery {
@@ -578,6 +688,20 @@ onBeforeUnmount(() => {
   }
 
   .product-gallery__footer {
+    display: none;
+  }
+
+  .product-gallery--editorial {
+    display: block;
+  }
+
+  .product-gallery--editorial .product-gallery__strip-wrap {
+    display: block;
+  }
+
+  .product-gallery--editorial .product-gallery__rail,
+  .product-gallery--editorial .product-gallery__main,
+  .product-gallery--editorial .product-gallery__footer {
     display: none;
   }
 }

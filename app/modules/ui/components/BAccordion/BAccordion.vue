@@ -3,6 +3,7 @@ interface AccordionItem {
   key: string | number
   title: string
   content?: string
+  icon?: string
 }
 
 interface Props {
@@ -51,7 +52,8 @@ function toggle(key: string | number) {
         :aria-expanded="isOpen(item.key)"
         @click="toggle(item.key)"
       >
-        <span class="text-xs font-medium uppercase tracking-[0.14em] text-secondary-800">
+        <span class="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.14em] text-secondary-800">
+          <Icon v-if="item.icon" :name="item.icon" class="size-4 text-primary-600" />
           {{ item.title }}
         </span>
         <Icon

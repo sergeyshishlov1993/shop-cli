@@ -4,10 +4,12 @@ import { useCartStore } from '~/modules/cart/cartStore'
 interface Props {
   variantId: number | null
   disabled?: boolean
+  compact?: boolean // без посилання «Продовжити покупки» (нижня панель)
 }
 
 const props = withDefaults(defineProps<Props>(), {
   disabled: false,
+  compact: false,
 })
 
 const cartStore = useCartStore()
@@ -38,7 +40,7 @@ async function handleAdd() {
       <Icon name="lucide:check" size="16" />
       У кошику — оформити
     </BBtn>
-    <NuxtLink to="/catalog" class="text-xs text-secondary-500 underline-offset-4 hover:text-primary-700 hover:underline">
+    <NuxtLink v-if="!compact" to="/catalog" class="text-xs text-secondary-500 underline-offset-4 hover:text-primary-700 hover:underline">
       Продовжити покупки
     </NuxtLink>
   </div>
