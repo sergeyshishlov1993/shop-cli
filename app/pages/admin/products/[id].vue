@@ -67,12 +67,14 @@ async function searchWear(search: string) {
   try { wearSearchOptions.value = (await adminApi.products({ search, limit: 10 })).items } catch (error) { toast.error(getAdminError(error)) } finally { wearSearchLoading.value = false }
 }
 
+const wearSearchKey = ref(0)
 watch(wearSearchValue, (id) => {
   const found = id ? wearSearchOptions.value.find(p => p.id === id) : null
   if (!found) return
   if (wearWith.value.length >= 12) { toast.error('Максимум 12 товарів'); return }
   wearWith.value.push({ id: found.id, name: found.name, slug: found.slug, price: found.basePrice, mainImage: null })
-  nextTick(() => { wearSearchValue.value = null })
+  // Перемонтовуємо пошук, щоб поле очистилось (BAutocomplete не скидає текст при null)
+  nextTick(() => { wearSearchValue.value = null; wearSearchKey.value++ })
 })
 
 function moveWear(index: number, delta: number) {
@@ -133,7 +135,7 @@ await load()
 
     <section class="space-y-4" data-testid="wear-with-admin">
       <div><h2 class="text-xl font-semibold">З чим носити</h2><p class="text-sm text-secondary-500">Ручний список (до 12). Якщо порожній — на вітрині показуються товари з інших категорій, які купують разом.</p></div>
-      <BAutocomplete v-model="wearSearchValue" :options="wearOptions" :loading="wearSearchLoading" label="Додати товар" placeholder="Почніть вводити назву" :min-chars="2" @search="searchWear" />
+      <BAutocomplete :key="wearSearchKey" v-model="wearSearchValue" :options="wearOptions" :loading="wearSearchLoading" label="Додати товар" placeholder="Почніть вводити назву" :min-chars="2" @search="searchWear" />
       <ul class="divide-y divide-secondary-100 rounded-xl border border-secondary-200 bg-white" data-testid="wear-with-list">
         <li v-for="(item, index) in wearWith" :key="item.id" class="flex items-center gap-3 p-3">
           <img v-if="item.mainImage" :src="getFileUrl(item.mainImage, 'thumb')" :alt="item.name" class="size-12 rounded object-cover">
