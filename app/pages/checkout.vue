@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 import CartSummary from '~/modules/cart/components/CartSummary.vue'
 import { useCartStore } from '~/modules/cart/cartStore'
 import { useAuthStore } from '~/modules/auth/authStore'
@@ -33,15 +34,7 @@ const form = reactive({
   comment: '',
 })
 
-const errors = reactive({
-  name: '',
-  phone: '',
-  email: '',
-  city: '',
-  warehouse: '',
-  addressLine: '',
-  submit: '',
-})
+const submitError = ref('')
 
 const deliveryOptions = [
   { label: 'Нова Пошта', value: 'NOVA_POSHTA', hint: 'Доставка у відділення або поштомат', icon: 'lucide:package' },
@@ -64,14 +57,18 @@ watch(
   },
 )
 
-watch(
-  () => form.deliveryProvider,
-  () => {
-    errors.city = ''
-    errors.warehouse = ''
-    errors.addressLine = ''
-  },
-)
+// Правила як у shop-api create-order.dto; місто/відділення — для Нової Пошти, адреса — для курʼєра
+const isNovaPoshta = () => form.deliveryProvider === 'NOVA_POSHTA'
+const isCourier = () => form.deliveryProvider === 'COURIER'
+const { errors, validate, touch, applyServerErrors } = useFormValidation({
+  name: [() => form.name, [rules.required('Вкажіть імʼя та прізвище'), rules.maxLength(255)]],
+  phone: [() => form.phone, [rules.required('Вкажіть номер телефону'), rules.phoneUa()]],
+  email: [() => form.email, [rules.email(), rules.maxLength(255)]],
+  city: [() => (isNovaPoshta() ? selectedCity.value : 'ok'), [rules.required('Оберіть місто')]],
+  warehouse: [() => (isNovaPoshta() ? selectedWarehouse.value : 'ok'), [rules.required('Оберіть відділення')]],
+  addressLine: [() => (isCourier() ? form.addressLine : 'ok'), [rules.required('Вкажіть адресу доставки'), rules.maxLength(500)]],
+  comment: [() => form.comment, [rules.maxLength(1000)]],
+})
 
 onMounted(() => {
   const user = authStore.user
@@ -82,16 +79,6 @@ onMounted(() => {
   }
 })
 
-function validate(): boolean {
-  errors.name = form.name.trim() ? '' : 'Вкажіть імʼя та прізвище'
-  errors.phone = form.phone.replace(/\D/g, '').length >= 10 ? '' : 'Вкажіть коректний номер телефону'
-  errors.email = !form.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) ? '' : 'Вкажіть коректний email'
-  errors.city = form.deliveryProvider !== 'NOVA_POSHTA' || selectedCity.value ? '' : 'Оберіть місто'
-  errors.warehouse = form.deliveryProvider !== 'NOVA_POSHTA' || selectedWarehouse.value ? '' : 'Оберіть відділення'
-  errors.addressLine = form.deliveryProvider !== 'COURIER' || form.addressLine.trim() ? '' : 'Вкажіть адресу доставки'
-
-  return !Object.entries(errors).some(([key, value]) => key !== 'submit' && Boolean(value))
-}
 
 const coupon = reactive({ code: '', applied: '', discount: 0, error: '', loading: false })
 
@@ -121,7 +108,7 @@ function removeCoupon() {
 }
 
 async function submitOrder() {
-  errors.submit = ''
+  submitError.value = ''
   if (!validate() || cartStore.isEmpty) return
 
   try {
@@ -150,8 +137,9 @@ async function submitOrder() {
     clearOrderIdempotencyKey()
     return order
   }
-  catch {
-    errors.submit = 'Не вдалося оформити замовлення. Перевірте дані та спробуйте ще раз.'
+  catch (error) {
+    // Помилки бекенду по полях — під полями; решта — загальним повідомленням
+    if (applyServerErrors(error).length || !(error as { data?: unknown })?.data) submitError.value = 'Не вдалося оформити замовлення. Перевірте дані та спробуйте ще раз.'
   }
 }
 
@@ -193,7 +181,7 @@ useSeoMeta({
       <template v-else>
         <h1 class="mb-4 text-xl font-medium text-secondary-900 lg:mb-8 lg:mt-4 lg:text-3xl lg:font-semibold">Оформлення замовлення</h1>
 
-        <form id="checkout-form" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8" @submit.prevent="submitOrder">
+        <form id="checkout-form" novalidate class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8" @submit.prevent="submitOrder">
           <div class="space-y-4 lg:space-y-8">
             <section class="checkout-card lg:hidden">
               <h2 class="checkout-card__title">
@@ -213,9 +201,9 @@ useSeoMeta({
             <section class="checkout-card">
               <h2 class="checkout-card__title"><Icon name="lucide:user" size="20" /> Контактні дані</h2>
               <div class="grid gap-4 sm:grid-cols-2">
-                <BInput v-model="form.name" label="Імʼя та прізвище" :error="errors.name" required />
+                <BInput v-model="form.name" label="Імʼя та прізвище" :error="errors.name" required @blur="touch('name')" />
                 <BPhoneInput v-model="form.phone" label="Телефон" :error="errors.phone" required />
-                <BInput v-model="form.email" type="email" label="Email" :error="errors.email" class="sm:col-span-2" />
+                <BInput v-model="form.email" type="email" label="Email" :error="errors.email" class="sm:col-span-2" @blur="touch('email')" />
               </div>
             </section>
 
@@ -269,7 +257,7 @@ useSeoMeta({
                   class="sm:col-span-2"
                 />
 
-                <BTextarea v-model="form.comment" label="Коментар до замовлення" class="max-lg:hidden sm:col-span-2" />
+                <BTextarea v-model="form.comment" label="Коментар до замовлення" :error="errors.comment" class="max-lg:hidden sm:col-span-2" />
               </div>
             </section>
 
@@ -298,7 +286,7 @@ useSeoMeta({
                   Коментар до замовлення
                   <Icon name="lucide:chevron-down" size="16" class="ml-auto transition-transform" :class="{ 'rotate-180': isCommentOpen }" />
                 </button>
-                <BTextarea v-if="isCommentOpen" v-model="form.comment" class="mt-3" />
+                <BTextarea v-if="isCommentOpen" v-model="form.comment" :error="errors.comment" class="mt-3" />
               </div>
             </section>
 
@@ -328,7 +316,7 @@ useSeoMeta({
                 </div>
               </div>
 
-              <p v-if="errors.submit" class="mt-3 text-sm text-danger">{{ errors.submit }}</p>
+              <p v-if="submitError" class="mt-3 text-sm text-danger">{{ submitError }}</p>
               <BBtn type="submit" block size="lg" :loading="orderStore.creating" :disabled="cartStore.isEmpty" class="mt-4">
                 Підтвердити замовлення
               </BBtn>
@@ -338,7 +326,7 @@ useSeoMeta({
 
         <!-- Мобільна закріплена кнопка -->
         <div class="glass fixed inset-x-0 bottom-0 z-30 rounded-t-2xl px-4 pb-4 pt-3 lg:hidden">
-          <p v-if="errors.submit" class="mb-2 text-sm text-danger">{{ errors.submit }}</p>
+          <p v-if="submitError" class="mb-2 text-sm text-danger">{{ submitError }}</p>
           <BBtn type="submit" form="checkout-form" block size="lg" :loading="orderStore.creating" :disabled="cartStore.isEmpty">
             Оформити замовлення · {{ formatPrice(payable) }}
           </BBtn>
