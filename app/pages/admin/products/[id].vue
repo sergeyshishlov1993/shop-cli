@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { adminApi, getAdminError, type AdminColor, type AdminProduct, type AdminProductMedia, type AdminSize, type AdminVariant } from '~/modules/admin/adminApi'
+import { adminApi, getAdminError, type AdminColor, type AdminProduct, type AdminSize, type AdminVariant } from '~/modules/admin/adminApi'
 import AdminDialog from '~/modules/admin/components/AdminDialog.vue'
-import { getFileUrl, getInstagramEmbedUrl } from '~/modules/common/helpers/fileUrl'
+import AdminProductMedia from '~/modules/admin/components/AdminProductMedia.vue'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
@@ -12,20 +12,16 @@ const { confirm } = useConfirm()
 const productId = Number(route.params.id)
 const product = ref<AdminProduct | null>(null)
 const variants = ref<AdminVariant[]>([])
-const media = ref<AdminProductMedia[]>([])
 const sizes = ref<AdminSize[]>([])
 const colors = ref<AdminColor[]>([])
-const mediaFile = shallowRef<File | null>(null)
-const instagramUrl = ref('')
-const uploading = ref(false)
 const variantDialog = ref(false)
 const editingVariantId = ref<number | null>(null)
 const variantForm = reactive({ sku: '', barcode: '', sizeId: 0, colorId: 0, price: null as number | null, stockQty: 0, reservedQty: 0, isActive: true })
 
 async function load() {
   try {
-    ;[product.value, variants.value, media.value, sizes.value, colors.value] = await Promise.all([
-      adminApi.product(productId), adminApi.variants(productId), adminApi.productMedia(productId), adminApi.sizes(), adminApi.colors(),
+    ;[product.value, variants.value, sizes.value, colors.value] = await Promise.all([
+      adminApi.product(productId), adminApi.variants(productId), adminApi.sizes(), adminApi.colors(),
     ])
   } catch (error) { toast.error(getAdminError(error, 'Не вдалося завантажити товар')) }
 }
@@ -53,48 +49,6 @@ async function saveVariant() {
 async function removeVariant(id: number) {
   if (!(await confirm({ title: 'Видалити варіант?', message: 'Цю дію не можна скасувати.', variant: 'danger', confirmText: 'Видалити' }))) return
   try { await adminApi.deleteVariant(productId, id); variants.value = await adminApi.variants(productId) } catch (error) { toast.error(getAdminError(error)) }
-}
-
-async function uploadMedia() {
-  if (!mediaFile.value) return
-  uploading.value = true
-  try {
-    const file = await adminApi.uploadFile(mediaFile.value)
-    await adminApi.addProductMedia(productId, { fileId: file.id, mediaType: file.fileType, isMain: media.value.length === 0, sortOrder: media.value.length })
-    mediaFile.value = null
-    media.value = await adminApi.productMedia(productId)
-    toast.success('Медіа додано')
-  } catch (error) { toast.error(getAdminError(error)) } finally { uploading.value = false }
-}
-
-async function addInstagramMedia() {
-  if (!instagramUrl.value.trim()) return
-  uploading.value = true
-  try {
-    await adminApi.addProductInstagramMedia(productId, { url: instagramUrl.value.trim(), sortOrder: media.value.length })
-    instagramUrl.value = ''
-    media.value = await adminApi.productMedia(productId)
-    toast.success('Медіа додано')
-  } catch (error) { toast.error(getAdminError(error)) } finally { uploading.value = false }
-}
-
-async function setMain(id: number) {
-  await adminApi.setMainProductMedia(productId, id)
-  media.value = await adminApi.productMedia(productId)
-}
-
-async function removeMedia(id: number) {
-  if (!(await confirm({ title: 'Видалити медіа з товару?', message: 'Цю дію не можна скасувати.', variant: 'danger', confirmText: 'Видалити' }))) return
-  await adminApi.deleteProductMedia(productId, id)
-  media.value = await adminApi.productMedia(productId)
-}
-
-async function moveMedia(index: number, direction: -1 | 1) {
-  const nextIndex = index + direction
-  if (nextIndex < 0 || nextIndex >= media.value.length) return
-  const reordered = [...media.value]
-  ;[reordered[index], reordered[nextIndex]] = [reordered[nextIndex]!, reordered[index]!]
-  media.value = await adminApi.reorderProductMedia(productId, reordered.map((item, sortOrder) => ({ id: item.id, sortOrder })))
 }
 
 await load()
@@ -135,28 +89,7 @@ await load()
 
     <section class="space-y-4">
       <div><h2 class="text-xl font-semibold">Медіагалерея</h2><p class="text-sm text-secondary-500">Перше основне медіа показується у картці товару. Порядок можна змінювати.</p></div>
-      <div class="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-secondary-300 bg-white p-4">
-        <BFile v-model="mediaFile" label="Нове фото або відео" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" :max-size="50 * 1024 * 1024" class="min-w-[280px] flex-1" />
-        <BBtn :disabled="!mediaFile" :loading="uploading" @click="uploadMedia">Додати</BBtn>
-      </div>
-      <div class="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-secondary-300 bg-white p-4">
-        <BInput v-model="instagramUrl" label="Відеовідгук з Instagram" placeholder="https://www.instagram.com/reel/..." class="min-w-[280px] flex-1" />
-        <BBtn :disabled="!instagramUrl.trim()" :loading="uploading" @click="addInstagramMedia">Додати</BBtn>
-      </div>
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article v-for="(item, index) in media" :key="item.id" class="overflow-hidden rounded-xl border border-secondary-200 bg-white">
-          <div class="aspect-[4/5] bg-secondary-100"><iframe v-if="item.externalUrl" :src="getInstagramEmbedUrl(item.externalUrl) ?? undefined" class="size-full border-0" loading="lazy" title="Instagram" /><video v-else-if="item.mediaType === 'VIDEO'" :src="getFileUrl(item.file)" class="size-full object-cover" muted controls /><img v-else :src="getFileUrl(item.file, 'medium')" :alt="item.file?.originalName" class="size-full object-cover"></div>
-          <div class="flex items-center justify-between gap-2 p-3">
-            <span class="text-xs" :class="item.isMain ? 'font-semibold text-emerald-700' : 'text-secondary-500'">{{ item.isMain ? 'Основне' : `№ ${index + 1}` }}</span>
-            <div class="flex">
-              <BBtn variant="icon" size="sm" :disabled="index === 0" @click="moveMedia(index, -1)"><Icon name="lucide:arrow-left" size="16" /></BBtn>
-              <BBtn variant="icon" size="sm" :disabled="index === media.length - 1" @click="moveMedia(index, 1)"><Icon name="lucide:arrow-right" size="16" /></BBtn>
-              <BBtn v-if="!item.isMain" variant="icon" size="sm" title="Зробити основним" @click="setMain(item.id)"><Icon name="lucide:star" size="16" /></BBtn>
-              <BBtn variant="icon" size="sm" class="text-red-600" @click="removeMedia(item.id)"><Icon name="lucide:trash-2" size="16" /></BBtn>
-            </div>
-          </div>
-        </article>
-      </div>
+      <AdminProductMedia :product-id="productId" />
     </section>
 
     <AdminDialog v-model="variantDialog" :title="editingVariantId ? 'Редагувати варіант' : 'Новий варіант'">

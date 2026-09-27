@@ -25,6 +25,7 @@ export interface AdminCategory {
 
 export interface AdminProduct {
   id: number
+  hoverVideoFileId?: number | null
   name: string
   slug: string
   description: string | null
@@ -193,6 +194,7 @@ export interface AdminProductInput {
   isNew: boolean
   isHit: boolean
   isSeasonal: boolean
+  hoverVideoFileId?: number | null
 }
 
 export interface AdminCategoryInput {

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 interface Props {
   max: number
+  // Показати зірочку «головне» на фото (адмінка товару до збереження)
+  selectableMain?: boolean
 }
 
 const props = defineProps<Props>()
 const files = defineModel<File[]>({ required: true })
+const mainIndex = defineModel<number | null>('main', { default: null })
 const emit = defineEmits<{ error: [message: string] }>()
 
 const input = useTemplateRef<HTMLInputElement>('input')
@@ -27,6 +30,7 @@ function onChange(event: Event) {
 
 function remove(index: number) {
   files.value = files.value.filter((_, i) => i !== index)
+  if (mainIndex.value !== null) mainIndex.value = mainIndex.value === index ? null : mainIndex.value - Number(index < mainIndex.value)
 }
 </script>
 
@@ -42,6 +46,18 @@ function remove(index: number) {
         <video v-if="item.isVideo" :src="item.url" class="size-full object-cover" muted preload="metadata" />
         <img v-else :src="item.url" :alt="item.file.name" class="size-full object-cover">
         <Icon v-if="item.isVideo" name="lucide:play" class="absolute bottom-1 left-1 size-4 text-white drop-shadow" />
+        <BBtn
+          v-if="selectableMain && !item.isVideo"
+          variant="icon"
+          size="sm"
+          class="absolute bottom-0.5 left-0.5 !size-6"
+          :class="mainIndex === index ? '!bg-primary-600 !text-white' : '!bg-white/85'"
+          :aria-label="mainIndex === index ? 'Головне фото' : 'Зробити головним'"
+          :title="mainIndex === index ? 'Головне фото' : 'Зробити головним'"
+          @click="mainIndex = index"
+        >
+          <Icon name="lucide:star" class="size-3.5" />
+        </BBtn>
         <BBtn
           variant="icon"
           size="sm"

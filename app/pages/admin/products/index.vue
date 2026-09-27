@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AdminDialog from '~/modules/admin/components/AdminDialog.vue'
+import AdminProductMedia from '~/modules/admin/components/AdminProductMedia.vue'
 import {
   adminApi,
   getAdminError,
@@ -26,20 +27,7 @@ const isLoading = ref(false)
 const isSaving = ref(false)
 const isDialogOpen = ref(false)
 const editingId = ref<number | null>(null)
-const mediaFile = shallowRef<File | null>(null)
-const instagramUrl = ref('')
-const isAddingInstagram = ref(false)
-
-async function addInstagramMedia() {
-  if (!editingId.value || !instagramUrl.value.trim()) return
-  isAddingInstagram.value = true
-  try {
-    const media = await adminApi.productMedia(editingId.value)
-    await adminApi.addProductInstagramMedia(editingId.value, { url: instagramUrl.value.trim(), sortOrder: media.length })
-    instagramUrl.value = ''
-    toast.success('Медіа додано')
-  } catch (error) { toast.error(getAdminError(error)) } finally { isAddingInstagram.value = false }
-}
+const mediaRef = useTemplateRef<InstanceType<typeof AdminProductMedia>>('mediaRef')
 
 const emptyForm = (): AdminProductInput => ({
   name: '',
@@ -90,7 +78,6 @@ const loadCategories = async () => (categories.value = await adminApi.categories
 function resetForm() {
   Object.assign(form, emptyForm())
   editingId.value = null
-  mediaFile.value = null
 }
 
 function openCreate() {
@@ -105,7 +92,6 @@ function openCreate() {
 
 function openEdit(product: AdminProduct) {
   editingId.value = product.id
-  mediaFile.value = null
   Object.assign(form, {
     name: product.name,
     slug: product.slug,
@@ -162,25 +148,8 @@ async function saveProduct() {
       ? await adminApi.updateProduct(editingId.value, payload)
       : await adminApi.createProduct(payload)
 
-    let mediaUploadFailed = false
-    if (mediaFile.value) {
-      try {
-        const uploadedFile = await adminApi.uploadFile(mediaFile.value)
-        await adminApi.addProductMedia(savedProduct.id, {
-          fileId: uploadedFile.id,
-          mediaType: uploadedFile.fileType,
-          isMain: true,
-          sortOrder: 0,
-        })
-      } catch (error) {
-        mediaUploadFailed = true
-        toast.error(getAdminError(error, 'Товар збережено, але медіа не вдалося завантажити'))
-      }
-    }
-
-    if (!mediaUploadFailed) {
-      toast.success(editingId.value ? 'Товар оновлено' : 'Товар створено')
-    }
+    const mediaOk = editingId.value || !mediaRef.value?.hasPending() || await mediaRef.value.uploadPending(savedProduct.id)
+    toast[mediaOk ? 'success' : 'error'](mediaOk ? (editingId.value ? 'Товар оновлено' : 'Товар створено') : 'Товар створено, але частину медіа не вдалося додати')
     isDialogOpen.value = false
     await loadProducts()
   } catch (error) {
@@ -276,21 +245,7 @@ await Promise.all([loadProducts(), loadCategories()])
         <BInput v-model="form.season" label="Сезон" />
         <BInput v-model="form.material" label="Матеріал" />
         <BTextarea v-model="form.description" label="Опис" :rows="4" class="sm:col-span-2" />
-        <div class="rounded-xl border border-dashed border-secondary-300 bg-secondary-50 p-4 sm:col-span-2">
-          <BFile
-            v-model="mediaFile"
-            accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime"
-            label="Головне фото або відео"
-            :max-size="50 * 1024 * 1024"
-          />
-          <p class="mt-2 text-xs leading-5 text-secondary-500">
-            JPG, PNG, WebP до 10 МБ або MP4/MOV до 50 МБ. Новий файл стане основним медіа товару; якщо файл не обирати, поточні медіа не зміняться.
-          </p>
-        </div>
-        <div v-if="editingId" class="flex flex-wrap items-end gap-3 sm:col-span-2">
-          <BInput v-model="instagramUrl" label="Відеовідгук з Instagram" placeholder="https://www.instagram.com/reel/..." class="min-w-[280px] flex-1" />
-          <BBtn type="button" :disabled="!instagramUrl.trim()" :loading="isAddingInstagram" @click="addInstagramMedia">Додати</BBtn>
-        </div>
+        <AdminProductMedia ref="mediaRef" :product-id="editingId" class="sm:col-span-2" />
         <div class="flex flex-wrap gap-4 sm:col-span-2">
           <BCheckbox v-model="form.isActive" label="Активний" />
           <BCheckbox v-model="form.isNew" label="Новинка" />

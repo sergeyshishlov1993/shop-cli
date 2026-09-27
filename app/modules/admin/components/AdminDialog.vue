@@ -14,7 +14,7 @@ defineEmits<{
   <Teleport to="body">
     <div
       v-if="modelValue"
-      class="fixed inset-0 z-[100] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-5"
+      class="fixed inset-0 z-[99] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-5"
       @click.self="$emit('update:modelValue', false)"
     >
       <section
