@@ -96,6 +96,18 @@ const mainMedia = computed(() => {
   const images = media.value.filter(m => m.mediaType === 'IMAGE' && m.file)
   return images.find(m => m.isMain) ?? images[0] ?? media.value.find(m => m.mediaType === 'VIDEO' && m.file) ?? media.value.find(m => m.externalUrl)
 })
+const infoDrawer = ref<'care' | 'delivery' | null>(null)
+const infoRows = computed(() => [
+  { key: 'care', title: 'Склад та догляд', icon: 'lucide:shirt' },
+  { key: 'sizes', title: 'Таблиця розмірів', icon: 'lucide:ruler' },
+  { key: 'delivery', title: 'Доставка та повернення', icon: 'lucide:truck' },
+  { key: 'reviews', title: `Відгуки (${product.value?.reviewCount ?? 0})`, icon: 'lucide:message-square' },
+] as const)
+function openInfo(key: (typeof infoRows.value)[number]['key']) {
+  if (key === 'sizes') isSizeChartOpen.value = true
+  else if (key === 'reviews') document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })
+  else infoDrawer.value = key
+}
 const isBarVisible = ref(false)
 useIntersectionObserver(galleryRef, ([entry]) => { isBarVisible.value = !!entry && !entry.isIntersecting && entry.boundingClientRect.top < 0 })
 const askSize = () => { isSizeSheetOpen.value = true; toast.warning('Оберіть розмір') }
@@ -412,33 +424,29 @@ watch(isSizeChartOpen, async (isOpen) => {
               </template>
             </div>
 
-            <BAccordion
-                :items="[
-                  { key: 'care', title: 'Склад та догляд', icon: 'lucide:shirt' },
-                  { key: 'sizes', title: 'Таблиця розмірів', icon: 'lucide:ruler' },
-                  { key: 'delivery', title: 'Доставка та повернення', icon: 'lucide:truck' },
-                  { key: 'reviews', title: `Відгуки (${product.reviewCount ?? 0})`, icon: 'lucide:message-square' },
-                ]"
-            >
-              <template #item="{ item }">
-                <ul v-if="item.key === 'care'" class="space-y-1 px-1 pb-4">
-                  <li v-if="product.material">Матеріал: {{ product.material }}</li>
-                  <li>Прання при температурі до 30°C</li>
-                  <li>Не використовувати відбілювачі</li>
-                </ul>
-                <ul v-else-if="item.key === 'delivery'" class="space-y-1 px-1 pb-4">
-                  <li>Нова Пошта — 1–3 дні</li>
-                  <li>Укрпошта — 3–7 днів</li>
-                  <li>Оплата карткою або при отриманні</li>
-                </ul>
-                <div v-else class="px-1 pb-4">
-                  <button v-if="item.key === 'sizes'" type="button" class="font-medium text-primary-700 underline-offset-4 hover:underline" @click="isSizeChartOpen = true">
-                    Відкрити таблицю розмірів
-                  </button>
-                  <a v-else href="#reviews" class="font-medium text-primary-700 underline-offset-4 hover:underline">Перейти до відгуків</a>
-                </div>
-              </template>
-            </BAccordion>
+            <!-- Як у референсі: рядки відкривають шторку з інфо, «Відгуки» — скрол до блоку -->
+            <ul class="divide-y divide-secondary-200 border-y border-secondary-200">
+              <li v-for="row in infoRows" :key="row.key">
+                <button type="button" class="flex w-full items-center gap-3 py-4 text-left text-sm uppercase tracking-[0.12em] text-secondary-900 transition-colors hover:text-primary-700" @click="openInfo(row.key)">
+                  <Icon :name="row.icon" size="18" class="shrink-0 text-primary-600" />
+                  <span class="flex-1">{{ row.title }}</span>
+                  <Icon name="lucide:chevron-right" size="18" class="shrink-0 text-secondary-400" />
+                </button>
+              </li>
+            </ul>
+
+            <BDrawer :model-value="infoDrawer !== null" side="right" :title="infoDrawer === 'care' ? 'Склад та догляд' : 'Доставка та повернення'" @update:model-value="infoDrawer = null">
+              <ul v-if="infoDrawer === 'care'" class="space-y-2 p-5 text-sm text-secondary-700">
+                <li v-if="product.material">Матеріал: {{ product.material }}</li>
+                <li>Прання при температурі до 30°C</li>
+                <li>Не використовувати відбілювачі</li>
+              </ul>
+              <ul v-else class="space-y-2 p-5 text-sm text-secondary-700">
+                <li>Нова Пошта — 1–3 дні</li>
+                <li>Укрпошта — 3–7 днів</li>
+                <li>Оплата карткою або при отриманні</li>
+              </ul>
+            </BDrawer>
           </div>
         </div>
       </section>
