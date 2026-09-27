@@ -8,6 +8,10 @@ import { useAuthStore } from '~/modules/auth/authStore'
 const isMobileMenuOpen = ref(false)
 const isSearchOpen = ref(false)
 const route = useRoute()
+// Активний пункт меню: добірка за ?isNew/isHit/isSeasonal, «Каталог» — каталог без добірки
+const collections = ['isNew', 'isHit', 'isSeasonal'] as const
+const isNavActive = (flag?: (typeof collections)[number]) => route.path.startsWith('/catalog')
+  && (flag ? route.query[flag] === 'true' : !collections.some(key => route.query[key] === 'true'))
 const authStore = useAuthStore()
 
 const isAuthenticated = computed(() => authStore.isAuthenticated)
@@ -48,12 +52,12 @@ const toggleSearch = () => (isSearchOpen.value = !isSearchOpen.value)
     </div>
 
     <nav class="store-nav store-container hidden md:flex" aria-label="Категорії">
-      <NuxtLink to="/catalog?isNew=true">Новинки</NuxtLink>
-      <NuxtLink to="/catalog">Каталог</NuxtLink>
-      <NuxtLink to="/catalog?isHit=true">Хіти</NuxtLink>
-      <NuxtLink to="/catalog?isSeasonal=true" class="is-sale">Сезонна добірка</NuxtLink>
-      <NuxtLink to="/about">Про нас</NuxtLink>
-      <NuxtLink to="/delivery">Доставка</NuxtLink>
+      <NuxtLink to="/catalog?isNew=true" :class="{ 'is-active': isNavActive('isNew') }">Новинки</NuxtLink>
+      <NuxtLink to="/catalog" :class="{ 'is-active': isNavActive() }">Каталог</NuxtLink>
+      <NuxtLink to="/catalog?isHit=true" :class="{ 'is-active': isNavActive('isHit') }">Хіти</NuxtLink>
+      <NuxtLink to="/catalog?isSeasonal=true" class="is-sale" :class="{ 'is-active': isNavActive('isSeasonal') }">Сезонна добірка</NuxtLink>
+      <NuxtLink to="/about" :class="{ 'is-active': route.path === '/about' }">Про нас</NuxtLink>
+      <NuxtLink to="/delivery" :class="{ 'is-active': route.path === '/delivery' }">Доставка</NuxtLink>
     </nav>
 
     <!-- Пошук — окремий повноекранний оверлей -->

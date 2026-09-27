@@ -40,7 +40,7 @@ export function useProductList() {
     return typeof slug === 'string' ? slug : undefined
   })
 
-  const params = reactive<CatalogQuery>({
+  const readQuery = (): CatalogQuery => ({
     category: routeCategory.value || (route.query.category as string) || undefined,
     productType: toStringArray(route.query.productType) as ProductType[] | undefined,
     size: toNumberArray(route.query.size),
@@ -58,6 +58,7 @@ export function useProductList() {
     page: route.query.page ? Number(route.query.page) : 1,
     limit: 24,
   })
+  const params = reactive<CatalogQuery>(readQuery())
 
   const totalPages = computed(() => Math.ceil(totalCount.value / (params.limit ?? 24)))
 
@@ -173,22 +174,13 @@ export function useProductList() {
   }
 
   watch(params, fetchProducts, { deep: true, immediate: true })
-  // Пошук із шапки на сторінці каталогу змінює лише ?search= — підхоплюємо його
-  watch(() => route.query.search, (value) => {
-    const next = typeof value === 'string' && value ? value : undefined
-    if (params.search !== next) {
-      loading.value = true
-      params.search = next
-      params.page = 1
-    }
-  })
-
-  watch(routeCategory, (category) => {
-    if (params.category !== category) {
-      loading.value = true
-      params.category = category
-      params.page = 1
-    }
+  // Переходи в межах каталогу (меню «Новинки/Хіти/Сезонна добірка», пошук із шапки, інша категорія) міняють лише URL —
+  // перечитуємо параметри з нього. Після власного syncToUrl значення ті самі, тож зайвого запиту немає.
+  watch(() => route.fullPath, () => {
+    const next = readQuery()
+    if (JSON.stringify(next) === JSON.stringify({ ...params })) return
+    loading.value = true
+    Object.assign(params, next)
   })
 
   return {

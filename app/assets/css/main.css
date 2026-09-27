@@ -489,8 +489,13 @@
         transition: transform 0.3s ease;
     }
 
-    .store-nav a:hover::after {
+    .store-nav a:hover::after,
+    .store-nav a.is-active::after {
         transform: scaleX(1);
+    }
+
+    .store-nav a.is-active {
+        font-weight: 600;
     }
 
     .store-nav a.is-sale {

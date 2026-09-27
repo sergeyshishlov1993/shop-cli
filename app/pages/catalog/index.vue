@@ -2,7 +2,11 @@
 import CatalogLayout from '~/modules/catalog/components/CatalogLayout.vue'
 
 const route = useRoute()
-const title = computed(() => (route.query.search ? `Пошук: «${route.query.search}»` : 'Каталог'))
+// Заголовок відповідає пункту меню, з якого прийшли
+const collectionTitles: Record<string, string> = { isNew: 'Новинки', isHit: 'Хіти', isSeasonal: 'Сезонна добірка' }
+const title = computed(() => route.query.search
+  ? `Пошук: «${route.query.search}»`
+  : Object.entries(collectionTitles).find(([key]) => route.query[key] === 'true')?.[1] ?? 'Каталог')
 
 useHead({
   title: 'Каталог',
