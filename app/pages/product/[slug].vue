@@ -293,7 +293,7 @@ watch(isSizeChartOpen, async (isOpen) => {
         </div>
       </section>
 
-      <section class="store-container grid gap-8 py-6 lg:grid-cols-2 lg:gap-10 lg:py-10">
+      <section class="store-container grid gap-8 py-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:gap-12 lg:py-10 xl:grid-cols-[minmax(0,400px)_minmax(0,1fr)]">
         <div class="hidden md:block lg:col-span-full"><BBreadcrumbs :items="breadcrumbs" /></div>
 
         <!-- Головне фото (isMain) зліва, як у референсі; на мобільному його вже показує слайдер -->

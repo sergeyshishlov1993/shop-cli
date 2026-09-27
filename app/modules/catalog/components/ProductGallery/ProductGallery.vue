@@ -89,7 +89,7 @@ const isFileVideo = (item: { mediaType: string, externalUrl?: string | null }) =
     <template v-else>
       <!-- Десктоп (editorial): стрічка великих медіа, по 3 в кадрі, зі snap і стрілками -->
       <div v-if="editorial" class="product-gallery__strip-wrap">
-        <div ref="stripRef" v-drag-scroll class="product-gallery__strip" :class="{ 'product-gallery__strip--peek': items.length > 3 }">
+        <div ref="stripRef" v-drag-scroll class="product-gallery__strip" :class="{ 'product-gallery__strip--peek': items.length > 4 }">
           <div
             v-for="(item, index) in items"
             :key="item.id"
@@ -135,11 +135,11 @@ const isFileVideo = (item: { mediaType: string, externalUrl?: string | null }) =
             />
           </div>
         </div>
-        <template v-if="items.length > 3">
-          <BBtn variant="icon" class="product-gallery__arrow product-gallery__arrow--prev" aria-label="Попередні" @click="stripRef?.scrollBy({ left: -stripRef.clientWidth / 3, behavior: 'smooth' })">
+        <template v-if="items.length > 4">
+          <BBtn variant="icon" class="product-gallery__arrow product-gallery__arrow--prev" aria-label="Попередні" @click="stripRef?.scrollBy({ left: -stripRef.clientWidth / 4, behavior: 'smooth' })">
             <Icon name="lucide:chevron-left" size="20" />
           </BBtn>
-          <BBtn variant="icon" class="product-gallery__arrow product-gallery__arrow--next" aria-label="Наступні" @click="stripRef?.scrollBy({ left: stripRef.clientWidth / 3, behavior: 'smooth' })">
+          <BBtn variant="icon" class="product-gallery__arrow product-gallery__arrow--next" aria-label="Наступні" @click="stripRef?.scrollBy({ left: stripRef.clientWidth / 4, behavior: 'smooth' })">
             <Icon name="lucide:chevron-right" size="20" />
           </BBtn>
         </template>
@@ -630,16 +630,19 @@ const isFileVideo = (item: { mediaType: string, externalUrl?: string | null }) =
 .product-gallery__strip {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: calc((100% - 8px) / 3);
+  grid-auto-columns: calc((100% - 12px) / 4);
   gap: 4px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
+  /* Без цього під час перетягування виділяються фото/текст (підсвічування кольором виділення) */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Більше 3 медіа — видно шматок наступного, щоб було зрозуміло, що стрічку можна тягнути */
 .product-gallery__strip--peek {
-  grid-auto-columns: calc((100% - 12px) / 3.3);
+  grid-auto-columns: calc((100% - 16px) / 4.3);
 }
 
 .product-gallery__tile {

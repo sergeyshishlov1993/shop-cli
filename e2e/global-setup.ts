@@ -13,12 +13,14 @@ export default async function globalSetup() {
   const adminPage = await admin.newPage()
   await adminPage.goto('/admin')
   await adminPage.waitForLoadState('networkidle')
-  if (!/\/admin/.test(adminPage.url())) {
+  if (!new URL(adminPage.url()).pathname.startsWith('/admin')) {
     const { email, password } = adminCreds()
     await uiLogin(adminPage, email, password)
     await adminPage.goto('/admin')
-    await expect(adminPage).toHaveURL(/\/admin/)
+    await expect.poll(() => new URL(adminPage.url()).pathname).toMatch(/^\/admin/)
   }
+  // Зберігаємо стан лише з access-токеном: інакше кожен тест робить refresh старим (уже ротованим) токеном і вилітає на /login
+  await expect.poll(async () => (await admin.cookies()).some(c => c.name === 'shop_access_token')).toBe(true)
   await admin.storageState({ path: ADMIN_STATE })
   await admin.close()
 
