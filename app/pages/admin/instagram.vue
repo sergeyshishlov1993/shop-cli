@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { adminApi, getAdminError, type AdminInstagramPost } from '~/modules/admin/adminApi'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 const { confirm } = useConfirm()
 
@@ -14,8 +15,13 @@ const link = ref('')
 const saving = ref(false)
 
 const INSTAGRAM_LINK_REGEX = /^https:\/\/(www\.)?instagram\.com\/(p|reel)\/[A-Za-z0-9_-]+/
-const isValidLink = computed(() => INSTAGRAM_LINK_REGEX.test(link.value.trim()))
-const canAdd = computed(() => !!file.value || isValidLink.value)
+// Без фото посилання обовʼязкове і має вести на пост/reel (як у CreateInstagramPostFromLinkDto)
+const { errors, validate, touch, applyServerErrors } = useFormValidation(() => ({
+  link: [() => link.value.trim(), file.value ? [] : [
+    rules.required('Оберіть фото або вставте посилання на пост'),
+    rules.pattern(INSTAGRAM_LINK_REGEX, 'Некоректне посилання на Instagram'),
+  ]],
+}))
 
 async function load() {
   loading.value = true
@@ -31,10 +37,7 @@ async function load() {
 }
 
 async function add() {
-  if (!canAdd.value) {
-    toast.error('Оберіть фото або вставте посилання на пост')
-    return
-  }
+  if (!validate()) return
   saving.value = true
   try {
     if (file.value) {
@@ -50,7 +53,8 @@ async function add() {
     await load()
   }
   catch (error) {
-    toast.error(getAdminError(error))
+    const rest = applyServerErrors(error)
+    if (rest.length || !errors.link) toast.error(getAdminError(error))
   }
   finally {
     saving.value = false
@@ -105,8 +109,8 @@ onMounted(load)
     <div class="mb-6 grid gap-4 rounded-xl border border-secondary-200 bg-white p-4 md:grid-cols-[16rem_1fr] md:items-end">
       <BFile v-model="file" label="Фото" accept="image/*" :max-size="10 * 1024 * 1024" />
       <div class="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-        <BInput v-model="link" label="Посилання на пост" placeholder="https://instagram.com/p/..." />
-        <BBtn :loading="saving" :disabled="!canAdd" class="max-sm:w-full" @click="add">Додати</BBtn>
+        <BInput v-model="link" label="Посилання на пост" placeholder="https://instagram.com/p/..." :error="errors.link" @blur="touch('link')" />
+        <BBtn :loading="saving" class="max-sm:w-full" @click="add">Додати</BBtn>
         <p class="text-xs text-secondary-400 sm:col-span-2">Можна лише вставити посилання — фото підтягнеться автоматично (для відео — обкладинка й плеєр Instagram).</p>
       </div>
     </div>

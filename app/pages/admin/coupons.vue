@@ -2,6 +2,7 @@
 import { adminApi, getAdminError, type AdminCoupon, type CreateCouponDto } from '~/modules/admin/adminApi'
 import AdminDialog from '~/modules/admin/components/AdminDialog.vue'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 const { confirm } = useConfirm()
 
@@ -13,6 +14,18 @@ const coupons = ref<AdminCoupon[]>([])
 const dialog = ref(false)
 const editId = ref<number | null>(null)
 const form = reactive<CreateCouponDto>({ code: '', discountType: 'PERCENT', discountValue: 10, minSubtotal: undefined, maxUses: undefined, isActive: true })
+
+const { errors, validate, touch, reset, applyServerErrors } = useFormValidation({
+  code: [() => form.code, [rules.required('Вкажіть код'), rules.minLength(3)]],
+  discountValue: [() => form.discountValue, [
+    rules.required('Вкажіть значення'),
+    rules.number(),
+    rules.min(0),
+    v => (form.discountType === 'PERCENT' ? rules.max(100, 'Відсоток не може перевищувати 100')(v) : ''),
+  ]],
+  minSubtotal: [() => form.minSubtotal, [rules.number(), rules.min(0)]],
+  maxUses: [() => form.maxUses, [rules.integer(), rules.min(1)]],
+})
 
 const typeOptions = [
   { label: 'Відсоток (%)', value: 'PERCENT' },
@@ -46,10 +59,12 @@ function edit(item?: AdminCoupon) {
   Object.assign(form, item
     ? { code: item.code, discountType: item.discountType, discountValue: item.discountValue, minSubtotal: item.minSubtotal ?? undefined, maxUses: item.maxUses ?? undefined, isActive: item.isActive }
     : { code: '', discountType: 'PERCENT', discountValue: 10, minSubtotal: undefined, maxUses: undefined, isActive: true })
+  reset()
   dialog.value = true
 }
 
 async function save() {
+  if (!validate()) return
   try {
     if (editId.value) await adminApi.updateCoupon(editId.value, form)
     else await adminApi.createCoupon(form)
@@ -57,7 +72,8 @@ async function save() {
     await load()
   }
   catch (e) {
-    toast.error(getAdminError(e))
+    const rest = applyServerErrors(e)
+    if (rest.length || !Object.values(errors).some(Boolean)) toast.error(getAdminError(e))
   }
 }
 
@@ -108,12 +124,12 @@ onMounted(load)
     </BTable>
 
     <AdminDialog v-model="dialog" :title="editId ? 'Редагувати промокод' : 'Новий промокод'">
-      <form class="grid gap-4 sm:grid-cols-2" @submit.prevent="save">
-        <BInput v-model="form.code" label="Код" required />
+      <form novalidate class="grid gap-4 sm:grid-cols-2" @submit.prevent="save">
+        <BInput v-model="form.code" label="Код" required :error="errors.code" @blur="touch('code')" />
         <BSelect v-model="form.discountType" label="Тип знижки" :options="typeOptions" />
-        <BInput v-model.number="form.discountValue" type="number" label="Значення" required />
-        <BInput v-model.number="form.minSubtotal" type="number" label="Мін. сума замовлення" />
-        <BInput v-model.number="form.maxUses" type="number" label="Ліміт використань" />
+        <BInput v-model.number="form.discountValue" type="number" label="Значення" required :error="errors.discountValue" @blur="touch('discountValue')" />
+        <BInput v-model.number="form.minSubtotal" type="number" label="Мін. сума замовлення" :error="errors.minSubtotal" @blur="touch('minSubtotal')" />
+        <BInput v-model.number="form.maxUses" type="number" label="Ліміт використань" :error="errors.maxUses" @blur="touch('maxUses')" />
         <BCheckbox v-model="form.isActive" label="Активний" />
         <div class="flex justify-end sm:col-span-2">
           <BBtn type="submit">Зберегти</BBtn>

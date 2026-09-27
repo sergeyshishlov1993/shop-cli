@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { adminApi, getAdminError, type AdminProduct, type AdminVariant } from '~/modules/admin/adminApi'
+import { useFormValidation, type Rule } from '~/modules/common/composables/useFormValidation'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
@@ -11,6 +12,13 @@ const selectedProduct = ref<AdminProduct | null>(null)
 const variants = ref<AdminVariant[]>([])
 const copies = reactive<Record<number, number>>({})
 const printing = ref(false)
+
+const isValidCopies = (n: unknown) => n === '' || n == null || (Number.isInteger(Number(n)) && Number(n) >= 0)
+const copiesRule: Rule = v => ((v as unknown[]).every(isValidCopies) ? '' : 'Кількість — ціле число ≥ 0')
+const atLeastOne: Rule = v => ((v as unknown[]).some(n => Number(n) > 0) ? '' : 'Вкажіть кількість ярликів')
+const { errors, validate, applyServerErrors } = useFormValidation({
+  copies: [() => variants.value.map(v => copies[v.id]), [copiesRule, atLeastOne]],
+})
 
 async function doSearch() {
   searching.value = true
@@ -32,13 +40,13 @@ async function pickProduct(p: AdminProduct) {
 }
 
 async function print() {
+  if (!validate()) {
+    if (errors.copies && !variants.value.some(v => !isValidCopies(copies[v.id]))) toast.error(errors.copies)
+    return
+  }
   const items = variants.value
     .filter(v => (copies[v.id] ?? 0) > 0)
     .map(v => ({ variantId: v.id, copies: copies[v.id] }))
-  if (!items.length) {
-    toast.error('Вкажіть кількість ярликів')
-    return
-  }
   printing.value = true
   try {
     const html = await adminApi.printLabels(items)
@@ -47,7 +55,8 @@ async function print() {
     setTimeout(() => URL.revokeObjectURL(url), 10000)
   }
   catch (e) {
-    toast.error(getAdminError(e))
+    const rest = applyServerErrors(e)
+    if (rest.length || !errors.copies) toast.error(getAdminError(e))
   }
   finally {
     printing.value = false
@@ -85,7 +94,7 @@ async function print() {
             <td data-label="SKU / штрихкод" class="py-1"><div>{{ v.sku }}</div><div class="text-xs text-secondary-500">{{ v.barcode || 'штрихкод = SKU' }}</div></td>
             <td data-label="Розмір/Колір">{{ [v.size?.name, v.color?.name].filter(Boolean).join(' · ') || '—' }}</td>
             <td data-label="Ціна">{{ v.price ?? '—' }}</td>
-            <td data-label="Ярликів"><BInput v-model.number="copies[v.id]" type="number" class="w-20" /></td>
+            <td data-label="Ярликів"><BInput v-model.number="copies[v.id]" type="number" class="w-20" :error="errors.copies && !isValidCopies(copies[v.id]) ? errors.copies : ''" /></td>
           </tr>
         </tbody>
       </table>

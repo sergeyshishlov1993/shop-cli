@@ -3,6 +3,7 @@ import AdminDialog from '~/modules/admin/components/AdminDialog.vue'
 import { adminApi, getAdminError, type AdminExpense } from '~/modules/admin/adminApi'
 import { useToast } from '~/modules/ui/composables/useToast'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
@@ -18,6 +19,12 @@ const typeFilter = ref('')
 const types: Record<ExpenseType, string> = { PURCHASE: 'Закупівля', LOGISTICS: 'Логістика', ADVERTISING: 'Реклама', PACKAGING: 'Пакування', SALARY: 'Зарплата', SERVICES: 'Послуги', RETURN: 'Повернення', OTHER: 'Інше' }
 
 const form = reactive<CreateExpenseDto>({ title: '', type: 'OTHER', amount: 0, expenseDate: new Date().toISOString().slice(0, 10), note: '' })
+const { errors, validate, touch, reset, applyServerErrors } = useFormValidation({
+  title: [() => form.title, [rules.required('Вкажіть назву витрати')]],
+  type: [() => form.type, [rules.required('Оберіть категорію')]],
+  amount: [() => form.amount, [rules.required('Вкажіть суму'), rules.number(), rules.min(0.01, 'Сума має бути не менше 0.01')]],
+  expenseDate: [() => form.expenseDate, [rules.required('Вкажіть дату')]],
+})
 const totalAmount = computed(() => expenses.value.reduce((sum, item) => sum + item.amount, 0))
 const typeOptions = computed(() => (Object.entries(types) as [ExpenseType, string][]).map(([value, label]) => ({ value, label })))
 const filterOptions = computed(() => [{ label: 'Усі витрати', value: '' }, ...typeOptions.value])
@@ -43,17 +50,19 @@ async function loadExpenses() {
 function openCreate() {
   editingId.value = null
   Object.assign(form, { title: '', type: 'OTHER', amount: 0, expenseDate: new Date().toISOString().slice(0, 10), note: '' })
+  reset()
   isDialogOpen.value = true
 }
 
 function openEdit(expense: AdminExpense) {
   editingId.value = expense.id
   Object.assign(form, { title: expense.title, type: expense.type, amount: expense.amount, expenseDate: expense.expenseDate.slice(0, 10), note: expense.note ?? '' })
+  reset()
   isDialogOpen.value = true
 }
 
 async function saveExpense() {
-  if (!form.title.trim() || form.amount <= 0) return toast.error('Заповніть назву та суму витрати')
+  if (!validate()) return
   isSaving.value = true
   try {
     const payload = { ...form, title: form.title.trim(), amount: Number(form.amount), expenseDate: new Date(`${form.expenseDate}T12:00:00`).toISOString(), note: form.note?.trim() || undefined }
@@ -61,7 +70,10 @@ async function saveExpense() {
     else { await adminApi.createExpense(payload); toast.success('Витрату додано') }
     isDialogOpen.value = false
     await loadExpenses()
-  } catch (error) { toast.error(getAdminError(error, 'Не вдалося зберегти витрату')) }
+  } catch (error) {
+    const rest = applyServerErrors(error)
+    if (rest.length || !Object.values(errors).some(Boolean)) toast.error(getAdminError(error, 'Не вдалося зберегти витрату'))
+  }
   finally { isSaving.value = false }
 }
 
@@ -130,13 +142,13 @@ await loadExpenses()
     <BBtn class="fixed bottom-24 right-4 z-30 !size-14 !rounded-full !p-0 shadow-lg lg:hidden" aria-label="Додати" @click="openCreate"><Icon name="lucide:plus" size="24" /></BBtn>
 
     <AdminDialog v-model="isDialogOpen" :title="editingId ? 'Редагувати витрату' : 'Нова витрата'">
-      <form class="space-y-5" @submit.prevent="saveExpense">
-        <BInput v-model="form.title" label="Назва" required />
+      <form novalidate class="space-y-5" @submit.prevent="saveExpense">
+        <BInput v-model="form.title" label="Назва" required :error="errors.title" @blur="touch('title')" />
         <div class="grid gap-4 sm:grid-cols-2">
-          <BSelect v-model="form.type" label="Категорія" :options="typeOptions" />
-          <BInput v-model.number="form.amount" type="number" min="0.01" step="0.01" label="Сума" required />
+          <BSelect v-model="form.type" label="Категорія" :options="typeOptions" required :error="errors.type" />
+          <BInput v-model.number="form.amount" type="number" min="0.01" step="0.01" label="Сума" required :error="errors.amount" @blur="touch('amount')" />
         </div>
-        <BInput v-model="form.expenseDate" type="date" label="Дата" required />
+        <BInput v-model="form.expenseDate" type="date" label="Дата" required :error="errors.expenseDate" @blur="touch('expenseDate')" />
         <BTextarea v-model="form.note" label="Примітка" :rows="3" />
         <div class="flex justify-end gap-3 border-t border-gray-200 pt-5">
           <BBtn type="button" variant="outline" @click="isDialogOpen = false">Скасувати</BBtn>

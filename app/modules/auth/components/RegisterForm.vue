@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/modules/auth/authStore'
 import { useToast } from '~/modules/ui/composables/useToast'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 const emit = defineEmits<{
   success: []
@@ -17,61 +18,15 @@ const form = reactive({
   password: '',
 })
 
-const errors = reactive({
-  firstName: '',
-  lastName: '',
-  email: '',
-  phone: '',
-  password: '',
-})
-
 const isLoading = ref(false)
 
-function validate(): boolean {
-  let isValid = true
-  errors.firstName = ''
-  errors.lastName = ''
-  errors.email = ''
-  errors.phone = ''
-  errors.password = ''
-
-  if (!form.firstName.trim()) {
-    errors.firstName = 'Ім\'я обов\'язкове'
-    isValid = false
-  }
-
-  if (!form.lastName.trim()) {
-    errors.lastName = 'Прізвище обов\'язкове'
-    isValid = false
-  }
-
-  if (!form.email.trim()) {
-    errors.email = 'Email обов\'язковий'
-    isValid = false
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    errors.email = 'Невірний формат email'
-    isValid = false
-  }
-
-  const rawPhone = form.phone.replace(/\D/g, '')
-  if (!rawPhone) {
-    errors.phone = 'Телефон обов\'язковий'
-    isValid = false
-  } else if (rawPhone.length < 12) {
-    errors.phone = 'Введіть повний номер'
-    isValid = false
-  }
-
-  if (!form.password) {
-    errors.password = 'Пароль обов\'язковий'
-    isValid = false
-  } else if (form.password.length < 6) {
-    errors.password = 'Мінімум 6 символів'
-    isValid = false
-  }
-
-  return isValid
-}
+const { errors, validate, touch, applyServerErrors } = useFormValidation({
+  firstName: [() => form.firstName, [rules.required('Ім\'я обов\'язкове')]],
+  lastName: [() => form.lastName, [rules.required('Прізвище обов\'язкове')]],
+  email: [() => form.email, [rules.required('Email обов\'язковий'), rules.email()]],
+  phone: [() => form.phone, [rules.required('Телефон обов\'язковий'), rules.phoneUa()]],
+  password: [() => form.password, [rules.required('Пароль обов\'язковий'), rules.minLength(6)]],
+})
 
 async function handleSubmit() {
   if (!validate()) return
@@ -86,7 +41,10 @@ async function handleSubmit() {
     })
     emit('success')
   } catch (error: unknown) {
-    toast.error(error instanceof Error ? error.message : 'Помилка реєстрації')
+    const rest = applyServerErrors(error)
+    if (rest.length || !Object.values(errors).some(Boolean)) {
+      toast.error(rest.join(', ') || (error instanceof Error ? error.message : 'Помилка реєстрації'))
+    }
   } finally {
     isLoading.value = false
   }
@@ -94,7 +52,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <form
+  <form novalidate
     class="space-y-5"
     @submit.prevent="handleSubmit"
   >
@@ -108,6 +66,7 @@ async function handleSubmit() {
         label="Ім'я"
         placeholder="Ваше ім'я"
         :error="errors.firstName"
+      @blur="touch('firstName')"
         required
       />
       <BInput
@@ -115,6 +74,7 @@ async function handleSubmit() {
         label="Прізвище"
         placeholder="Ваше прізвище"
         :error="errors.lastName"
+      @blur="touch('lastName')"
         required
       />
     </div>
@@ -125,6 +85,7 @@ async function handleSubmit() {
       label="Email"
       placeholder="your@email.com"
       :error="errors.email"
+      @blur="touch('email')"
       required
     />
 
@@ -132,6 +93,7 @@ async function handleSubmit() {
       v-model="form.phone"
       label="Телефон"
       :error="errors.phone"
+      @blur="touch('phone')"
       required
     />
 
@@ -140,6 +102,7 @@ async function handleSubmit() {
       label="Пароль"
       placeholder="Мінімум 6 символів"
       :error="errors.password"
+      @blur="touch('password')"
       required
     />
 

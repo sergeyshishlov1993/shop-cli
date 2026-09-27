@@ -4,6 +4,7 @@ import { returnReasonLabels, returnStatusLabels, returnStatusVariants, returnTra
 import ReturnThumb from '~/modules/returns/components/ReturnThumb.vue'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
 import { useToast } from '~/modules/ui/composables/useToast'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
@@ -25,15 +26,17 @@ const nextStatuses = computed(() => ret.value ? returnTransitions[ret.value.stat
 const isRollback = (s: string) => ret.value?.status === 'RECEIVED' && s === 'APPROVED'
 const statusOptions = computed(() => [{ value: '', label: 'Оберіть новий статус' }, ...nextStatuses.value.map(s => ({ value: s, label: isRollback(s) ? '↩ Скасувати «Отримано» (помилка)' : returnStatusLabels[s] }))])
 const refundNumber = computed(() => Number(String(form.refundAmount).replace(',', '.')))
-const canSubmit = computed(() => {
-  if (!form.status) return false
-  if (form.status === 'REJECTED') return !!form.rejectReason.trim()
-  if (form.status === 'REFUNDED') return refundNumber.value > 0
-  return true
+const { errors, validate, touch, reset, applyServerErrors } = useFormValidation({
+  status: [() => form.status, [rules.required('Оберіть новий статус')]],
+  rejectReason: [() => form.rejectReason, [v => (form.status === 'REJECTED' ? rules.required('Вкажіть причину відмови')(v) : ''), rules.maxLength(2000)]],
+  refundAmount: [() => form.refundAmount, [v => (form.status === 'REFUNDED' ? rules.required('Вкажіть суму повернення')(v) : ''), rules.number(), rules.positive()]],
+  comment: [() => form.comment, [rules.maxLength(2000)]],
+  managerComment: [() => form.managerComment, [rules.maxLength(2000)]],
 })
 
 function resetForm(r: ReturnDetail) {
   Object.assign(form, { status: '', comment: '', rejectReason: '', managerComment: r.managerComment || '', refundAmount: r.refundAmount ?? itemsTotal.value })
+  reset()
 }
 
 async function load() {
@@ -44,7 +47,7 @@ async function load() {
 }
 
 async function submit() {
-  if (!ret.value || !form.status || !canSubmit.value) return
+  if (!ret.value || !validate() || !form.status) return
   const status = form.status
   if (isRollback(status)) {
     if (!(await confirm({ title: 'Скасувати «Отримано на складі»?', message: 'Заявка повернеться в статус «Схвалено», а додані на склад залишки буде списано назад.', confirmText: 'Скасувати отримання', variant: 'warning' }))) return
@@ -66,7 +69,10 @@ async function submit() {
     resetForm(ret.value)
     toast.success(`Статус: ${returnStatusLabels[ret.value.status]}`)
   }
-  catch (e) { toast.error(getAdminError(e)) }
+  catch (e) {
+    const rest = applyServerErrors(e)
+    if (rest.length || !Object.values(errors).some(Boolean)) toast.error(getAdminError(e))
+  }
   finally { saving.value = false }
 }
 
@@ -156,13 +162,13 @@ onMounted(load)
           <section class="rounded-xl border border-secondary-200 bg-white p-4 sm:p-5">
             <h2 class="mb-3 font-semibold text-secondary-900">Змінити статус</h2>
             <p v-if="!nextStatuses.length" class="text-sm text-secondary-500">Заявка у фінальному статусі.</p>
-            <form v-else class="space-y-3" @submit.prevent="submit">
-              <BSelect v-model="form.status" label="Новий статус" :options="statusOptions" />
-              <BTextarea v-if="form.status === 'REJECTED'" v-model="form.rejectReason" label="Причина відмови (бачить клієнт)" required />
-              <BInput v-if="form.status === 'REFUNDED'" v-model="form.refundAmount" type="number" min="0" step="0.01" label="Сума повернення, грн" required />
-              <BTextarea v-model="form.comment" label="Коментар до зміни (в історію)" />
-              <BTextarea v-model="form.managerComment" label="Коментар менеджера (бачить клієнт)" />
-              <BBtn type="submit" class="w-full" :loading="saving" :disabled="!canSubmit" :variant="form.status === 'REJECTED' ? 'danger' : 'primary'">Зберегти</BBtn>
+            <form novalidate v-else class="space-y-3" @submit.prevent="submit">
+              <BSelect v-model="form.status" label="Новий статус" :options="statusOptions" required :error="errors.status" />
+              <BTextarea v-if="form.status === 'REJECTED'" v-model="form.rejectReason" label="Причина відмови (бачить клієнт)" required :error="errors.rejectReason" />
+              <BInput v-if="form.status === 'REFUNDED'" v-model="form.refundAmount" type="number" min="0" step="0.01" label="Сума повернення, грн" required :error="errors.refundAmount" @blur="touch('refundAmount')" />
+              <BTextarea v-model="form.comment" label="Коментар до зміни (в історію)" :error="errors.comment" />
+              <BTextarea v-model="form.managerComment" label="Коментар менеджера (бачить клієнт)" :error="errors.managerComment" />
+              <BBtn type="submit" class="w-full" :loading="saving" :disabled="!form.status" :variant="form.status === 'REJECTED' ? 'danger' : 'primary'">Зберегти</BBtn>
             </form>
           </section>
         </div>

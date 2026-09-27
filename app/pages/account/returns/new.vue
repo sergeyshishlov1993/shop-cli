@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { getApiError, returnReasonLabels, returnsApi, type ReturnReason } from '~/modules/returns/returns'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 import ReturnThumb from '~/modules/returns/components/ReturnThumb.vue'
 
 definePageMeta({ layout: 'account', middleware: ['auth', 'returns-enabled'] })
@@ -21,18 +22,18 @@ const photos = ref<Array<{ id: number, url: string }>>([])
 const photoFile = ref<File | null>(null)
 const uploading = ref(false)
 const submitting = ref(false)
-const submitted = ref(false)
 
 const returnable = computed(() => eligibility.value?.items.filter(i => i.returnableQty > 0) ?? [])
 const chosen = computed(() => Object.entries(selected).filter(([, qty]) => qty > 0).map(([orderItemId, quantity]) => ({ orderItemId: Number(orderItemId), quantity })))
 const refundTotal = computed(() => chosen.value.reduce((sum, c) => sum + c.quantity * (eligibility.value?.items.find(i => i.orderItemId === c.orderItemId)?.unitPrice ?? 0), 0))
 const reasonOptions = [{ value: '', label: 'Оберіть причину' }, ...Object.entries(returnReasonLabels).map(([value, label]) => ({ value, label }))]
 
-const errors = computed(() => ({
-  items: chosen.value.length ? '' : 'Оберіть хоча б один товар',
-  reason: reason.value ? '' : 'Оберіть причину',
-  refundDetails: refundDetails.value.trim().length >= 8 ? '' : 'Вкажіть IBAN або номер картки',
-}))
+const { errors, validate, touch, applyServerErrors } = useFormValidation({
+  items: [() => chosen.value, [rules.required('Оберіть хоча б один товар')]],
+  reason: [() => reason.value, [rules.required('Оберіть причину')]],
+  comment: [() => comment.value, [rules.maxLength(2000)]],
+  refundDetails: [() => refundDetails.value, [rules.required('Вкажіть IBAN або номер картки'), rules.minLength(8, 'Вкажіть IBAN або номер картки'), rules.maxLength(64)]],
+})
 
 function toggle(orderItemId: number, on: boolean) {
   selected[orderItemId] = on ? 1 : 0
@@ -51,8 +52,7 @@ watch(photoFile, async (file) => {
 })
 
 async function submit() {
-  submitted.value = true
-  if (Object.values(errors.value).some(Boolean)) return
+  if (!validate()) return
   submitting.value = true
   try {
     const created = await returnsApi.create({
@@ -66,7 +66,10 @@ async function submit() {
     toast.success(`Заявку ${created.number} створено`)
     await navigateTo(`/account/returns/${created.id}`)
   }
-  catch (e) { toast.error(getApiError(e, 'Не вдалося створити заявку')) }
+  catch (e) {
+    const rest = applyServerErrors(e)
+    if (rest.length || !Object.values(errors).some(Boolean)) toast.error(rest.join('. ') || getApiError(e, 'Не вдалося створити заявку'))
+  }
   finally { submitting.value = false }
 }
 </script>
@@ -105,12 +108,12 @@ async function submit() {
               </div>
             </li>
           </ul>
-          <p v-if="submitted && errors.items" class="mt-2 text-sm text-red-600">{{ errors.items }}</p>
+          <p v-if="errors.items" class="b-field__error mt-2">{{ errors.items }}</p>
         </section>
 
         <section class="glass space-y-4 rounded-xl p-4 sm:p-5">
-          <BSelect v-model="reason" label="Причина повернення" :options="reasonOptions" :error="submitted ? errors.reason : undefined" />
-          <BTextarea v-model="comment" label="Коментар (необовʼязково)" placeholder="Опишіть, що саме не так" />
+          <BSelect v-model="reason" label="Причина повернення" :options="reasonOptions" :error="errors.reason" required />
+          <BTextarea v-model="comment" label="Коментар (необовʼязково)" placeholder="Опишіть, що саме не так" :error="errors.comment" />
           <div>
             <p class="mb-2 text-sm font-medium text-secondary-700">Фото (до {{ MAX_PHOTOS }})</p>
             <div class="flex flex-wrap gap-2">
@@ -125,7 +128,7 @@ async function submit() {
       </div>
 
       <aside class="glass h-fit space-y-4 rounded-xl p-4 sm:p-5 lg:sticky lg:top-24">
-        <BInput v-model="refundDetails" label="IBAN або номер картки" placeholder="UA… або 4149 …" :error="submitted ? errors.refundDetails : undefined" required />
+        <BInput v-model="refundDetails" label="IBAN або номер картки" placeholder="UA… або 4149 …" :error="errors.refundDetails" required @blur="touch('refundDetails')" />
         <p class="text-xs text-secondary-500">Кошти повернемо на ці реквізити після отримання та перевірки товару.</p>
         <p class="flex justify-between text-sm"><span class="text-secondary-500">Вартість обраних товарів</span><b>{{ formatPrice(refundTotal) }}</b></p>
         <BBtn type="submit" class="w-full" :loading="submitting" :disabled="uploading">Надіслати заявку</BBtn>

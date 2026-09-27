@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/modules/auth/authStore'
 import { useToast } from '~/modules/ui/composables/useToast'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 const emit = defineEmits<{
   success: []
@@ -14,36 +15,12 @@ const form = reactive({
   password: '',
 })
 
-const errors = reactive({
-  email: '',
-  password: '',
-})
-
 const isLoading = ref(false)
 
-function validate(): boolean {
-  let isValid = true
-  errors.email = ''
-  errors.password = ''
-
-  if (!form.email.trim()) {
-    errors.email = 'Email обов\'язковий'
-    isValid = false
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    errors.email = 'Невірний формат email'
-    isValid = false
-  }
-
-  if (!form.password) {
-    errors.password = 'Пароль обов\'язковий'
-    isValid = false
-  } else if (form.password.length < 6) {
-    errors.password = 'Мінімум 6 символів'
-    isValid = false
-  }
-
-  return isValid
-}
+const { errors, validate, touch } = useFormValidation({
+  email: [() => form.email, [rules.required('Email обов\'язковий'), rules.email()]],
+  password: [() => form.password, [rules.required('Пароль обов\'язковий')]],
+})
 
 async function handleSubmit() {
   if (!validate()) return
@@ -61,7 +38,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <form
+  <form novalidate
     class="space-y-5"
     @submit.prevent="handleSubmit"
   >
@@ -75,6 +52,7 @@ async function handleSubmit() {
       label="Email"
       placeholder="your@email.com"
       :error="errors.email"
+      @blur="touch('email')"
       required
     />
 
@@ -83,6 +61,7 @@ async function handleSubmit() {
       label="Пароль"
       placeholder="Введіть пароль"
       :error="errors.password"
+      @blur="touch('password')"
       required
     />
 

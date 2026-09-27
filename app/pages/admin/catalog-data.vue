@@ -2,6 +2,7 @@
 import { adminApi, getAdminError, type AdminColor, type AdminSize } from '~/modules/admin/adminApi'
 import AdminDialog from '~/modules/admin/components/AdminDialog.vue'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 const toast = useToast()
@@ -14,12 +15,34 @@ const colorId = ref<number | null>(null)
 const sizeId = ref<number | null>(null)
 const colorForm = reactive({ name: '', hexCode: '#000000', isActive: true })
 const sizeForm = reactive({ name: '', sizeType: 'CLOTHING' as AdminSize['sizeType'], sortOrder: 0, isActive: true })
+const colorValidation = useFormValidation({
+  name: [() => colorForm.name, [rules.required('Вкажіть назву')]],
+  hexCode: [() => colorForm.hexCode, [rules.pattern(/^#[0-9A-Fa-f]{6}$/, 'Формат #RRGGBB')]],
+})
+const sizeValidation = useFormValidation({
+  name: [() => sizeForm.name, [rules.required('Вкажіть назву')]],
+  sortOrder: [() => sizeForm.sortOrder, [rules.integer(), rules.min(0, 'Значення не може бути відʼємним')]],
+})
+const colorErrors = colorValidation.errors
+const sizeErrors = sizeValidation.errors
 
 async function load() { [colors.value, sizes.value] = await Promise.all([adminApi.colors(), adminApi.sizes()]) }
-function editColor(item?: AdminColor) { colorId.value = item?.id ?? null; Object.assign(colorForm, item ? { name: item.name, hexCode: item.hexCode || '#000000', isActive: item.isActive } : { name: '', hexCode: '#000000', isActive: true }); colorDialog.value = true }
-function editSize(item?: AdminSize) { sizeId.value = item?.id ?? null; Object.assign(sizeForm, item ? { name: item.name, sizeType: item.sizeType, sortOrder: item.sortOrder, isActive: item.isActive } : { name: '', sizeType: 'CLOTHING', sortOrder: 0, isActive: true }); sizeDialog.value = true }
-async function saveColor() { try { if (colorId.value) await adminApi.updateColor(colorId.value, colorForm); else await adminApi.createColor(colorForm); colorDialog.value = false; await load() } catch (error) { toast.error(getAdminError(error)) } }
-async function saveSize() { try { if (sizeId.value) await adminApi.updateSize(sizeId.value, sizeForm); else await adminApi.createSize(sizeForm); sizeDialog.value = false; await load() } catch (error) { toast.error(getAdminError(error)) } }
+function editColor(item?: AdminColor) { colorId.value = item?.id ?? null; Object.assign(colorForm, item ? { name: item.name, hexCode: item.hexCode || '#000000', isActive: item.isActive } : { name: '', hexCode: '#000000', isActive: true }); colorValidation.reset(); colorDialog.value = true }
+function editSize(item?: AdminSize) { sizeId.value = item?.id ?? null; Object.assign(sizeForm, item ? { name: item.name, sizeType: item.sizeType, sortOrder: item.sortOrder, isActive: item.isActive } : { name: '', sizeType: 'CLOTHING', sortOrder: 0, isActive: true }); sizeValidation.reset(); sizeDialog.value = true }
+async function saveColor() {
+  if (!colorValidation.validate()) return
+  try { if (colorId.value) await adminApi.updateColor(colorId.value, colorForm); else await adminApi.createColor(colorForm); colorDialog.value = false; await load() } catch (error) {
+    const rest = colorValidation.applyServerErrors(error)
+    if (rest.length || !Object.values(colorErrors).some(Boolean)) toast.error(getAdminError(error))
+  }
+}
+async function saveSize() {
+  if (!sizeValidation.validate()) return
+  try { if (sizeId.value) await adminApi.updateSize(sizeId.value, sizeForm); else await adminApi.createSize(sizeForm); sizeDialog.value = false; await load() } catch (error) {
+    const rest = sizeValidation.applyServerErrors(error)
+    if (rest.length || !Object.values(sizeErrors).some(Boolean)) toast.error(getAdminError(error))
+  }
+}
 async function removeColor(id: number) { if (!(await confirm({ title: 'Видалити колір?', message: 'Цю дію не можна скасувати.', variant: 'danger', confirmText: 'Видалити' }))) return; try { await adminApi.deleteColor(id); await load() } catch (error) { toast.error(getAdminError(error, 'Колір використовується у варіантах')) } }
 async function removeSize(id: number) { if (!(await confirm({ title: 'Видалити розмір?', message: 'Цю дію не можна скасувати.', variant: 'danger', confirmText: 'Видалити' }))) return; try { await adminApi.deleteSize(id); await load() } catch (error) { toast.error(getAdminError(error, 'Розмір використовується у варіантах')) } }
 await load()
@@ -71,13 +94,13 @@ await load()
       </section>
     </div>
     <AdminDialog v-model="colorDialog" :title="colorId ? 'Редагувати колір' : 'Новий колір'">
-      <form class="space-y-4" @submit.prevent="saveColor">
-        <BInput v-model="colorForm.name" label="Назва" required />
+      <form novalidate class="space-y-4" @submit.prevent="saveColor">
+        <BInput v-model="colorForm.name" label="Назва" required :error="colorErrors.name" @blur="colorValidation.touch('name')" />
         <label class="block space-y-1">
           <span class="text-sm">HEX</span>
           <div class="flex gap-3">
             <input v-model="colorForm.hexCode" type="color" class="h-11 w-16 rounded border border-secondary-200">
-            <BInput v-model="colorForm.hexCode" pattern="#[0-9A-Fa-f]{6}" class="flex-1" />
+            <BInput v-model="colorForm.hexCode" class="flex-1" :error="colorErrors.hexCode" @blur="colorValidation.touch('hexCode')" />
           </div>
         </label>
         <BCheckbox v-model="colorForm.isActive" label="Активний" />
@@ -85,10 +108,10 @@ await load()
       </form>
     </AdminDialog>
     <AdminDialog v-model="sizeDialog" :title="sizeId ? 'Редагувати розмір' : 'Новий розмір'">
-      <form class="space-y-4" @submit.prevent="saveSize">
-        <BInput v-model="sizeForm.name" label="Назва" required />
+      <form novalidate class="space-y-4" @submit.prevent="saveSize">
+        <BInput v-model="sizeForm.name" label="Назва" required :error="sizeErrors.name" @blur="sizeValidation.touch('name')" />
         <BSelect v-model="sizeForm.sizeType" label="Тип" :options="[{ label: 'Одяг', value: 'CLOTHING' }, { label: 'Взуття', value: 'SHOES' }, { label: 'Аксесуари', value: 'ACCESSORY' }]" />
-        <BInput v-model.number="sizeForm.sortOrder" type="number" label="Порядок" />
+        <BInput v-model.number="sizeForm.sortOrder" type="number" label="Порядок" :error="sizeErrors.sortOrder" @blur="sizeValidation.touch('sortOrder')" />
         <BCheckbox v-model="sizeForm.isActive" label="Активний" />
         <div class="flex justify-end"><BBtn type="submit">Зберегти</BBtn></div>
       </form>

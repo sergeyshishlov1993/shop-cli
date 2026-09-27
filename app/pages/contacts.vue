@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { useFeedbackStore } from '~/modules/feedback/feedbackStore'
 import { useSettingsStore } from '~/modules/settings/settingsStore'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 const feedbackStore = useFeedbackStore()
 const settingsStore = useSettingsStore()
 const form = reactive({ name: '', email: '', phone: '', message: '' })
 const errorMessage = ref('')
+
+const { errors, validate, touch, applyServerErrors } = useFormValidation({
+  name: [() => form.name, [rules.required('Вкажіть імʼя'), rules.minLength(2), rules.maxLength(100)]],
+  email: [() => form.email, [rules.email()]],
+  phone: [() => form.phone, [rules.maxLength(20)]],
+  message: [() => form.message, [rules.required('Напишіть повідомлення'), rules.minLength(10), rules.maxLength(2000)]],
+})
 
 await useAsyncData('contacts-settings', async () => {
   await settingsStore.fetch()
@@ -14,10 +22,7 @@ await useAsyncData('contacts-settings', async () => {
 
 async function submit() {
   errorMessage.value = ''
-  if (!form.name.trim() || !form.message.trim()) {
-    errorMessage.value = 'Заповніть імʼя та повідомлення.'
-    return
-  }
+  if (!validate()) return
 
   try {
     await feedbackStore.send({
@@ -27,8 +32,9 @@ async function submit() {
       message: form.message.trim(),
     })
   }
-  catch {
-    errorMessage.value = 'Не вдалося надіслати звернення. Спробуйте ще раз.'
+  catch (e) {
+    const rest = applyServerErrors(e)
+    if (rest.length || !Object.values(errors).some(Boolean)) errorMessage.value = rest.join('. ') || 'Не вдалося надіслати звернення. Спробуйте ще раз.'
   }
 }
 
@@ -57,12 +63,12 @@ useSeoMeta({ title: 'Контакти', description: 'Контакти мага�
         <BEmptyState v-if="feedbackStore.sent" title="Повідомлення надіслано" description="Ми звʼяжемося з вами найближчим часом.">
           <template #action><BBtn variant="outline" @click="feedbackStore.reset">Нове звернення</BBtn></template>
         </BEmptyState>
-        <form v-else class="grid gap-4 sm:grid-cols-2" @submit.prevent="submit">
+        <form novalidate v-else class="grid gap-4 sm:grid-cols-2" @submit.prevent="submit">
           <h2 class="text-xl font-semibold text-secondary-900 sm:col-span-2">Напишіть нам</h2>
-          <BInput v-model="form.name" label="Імʼя" required />
-          <BPhoneInput v-model="form.phone" label="Телефон" />
-          <BInput v-model="form.email" type="email" label="Email" class="sm:col-span-2" />
-          <BTextarea v-model="form.message" label="Повідомлення" required class="sm:col-span-2" />
+          <BInput v-model="form.name" label="Імʼя" required :error="errors.name" @blur="touch('name')" />
+          <BPhoneInput v-model="form.phone" label="Телефон" :error="errors.phone" />
+          <BInput v-model="form.email" type="email" label="Email" class="sm:col-span-2" :error="errors.email" @blur="touch('email')" />
+          <BTextarea v-model="form.message" label="Повідомлення" required class="sm:col-span-2" :error="errors.message" />
           <p v-if="errorMessage" class="text-sm text-danger sm:col-span-2">{{ errorMessage }}</p>
           <BBtn type="submit" :loading="feedbackStore.sending" class="sm:col-span-2">Надіслати</BBtn>
         </form>

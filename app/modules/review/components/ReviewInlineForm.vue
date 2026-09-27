@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 import ReviewMediaPicker from '~/modules/review/components/ReviewMediaPicker.vue'
 import { useToast } from '~/modules/ui/composables/useToast'
 import { getFileUrl } from '~/modules/common/helpers/fileUrl'
@@ -31,9 +32,14 @@ const loading = ref(false)
 const keptMedia = computed(() => (props.initial?.media ?? []).filter(m => !removeMediaIds.value.includes(m.id)))
 const freeSlots = computed(() => MAX_MEDIA - keptMedia.value.length)
 
+const { errors, validate, applyServerErrors } = useFormValidation({
+  rating: [() => rating.value, props.withRating ? [rules.required('Вкажіть оцінку'), rules.min(1, 'Вкажіть оцінку'), rules.max(5, 'Оцінка від 1 до 5')] : []],
+  text: [() => text.value, [rules.required('Введіть текст'), rules.maxLength(2000)]],
+})
+
 async function onSubmit() {
   error.value = ''
-  if (!text.value.trim()) return
+  if (!validate()) return
   loading.value = true
   try {
     await props.action({
@@ -43,9 +49,12 @@ async function onSubmit() {
       removeMediaIds: removeMediaIds.value,
     })
   }
-  catch {
-    error.value = 'Не вдалося зберегти'
-    toast.error(error.value)
+  catch (e) {
+    const rest = applyServerErrors(e)
+    if (rest.length || !Object.values(errors).some(Boolean)) {
+      error.value = rest.join('. ') || 'Не вдалося зберегти'
+      toast.error(error.value)
+    }
   }
   finally {
     loading.value = false
@@ -54,10 +63,13 @@ async function onSubmit() {
 </script>
 
 <template>
-  <form class="flex flex-col gap-3" @submit.prevent="onSubmit">
-    <BRating v-if="withRating" v-model="rating" size="sm" />
+  <form novalidate class="flex flex-col gap-3" @submit.prevent="onSubmit">
+    <template v-if="withRating">
+      <BRating v-model="rating" size="sm" />
+      <p v-if="errors.rating" class="b-field__error">{{ errors.rating }}</p>
+    </template>
 
-    <BTextarea v-model="text" :rows="3" placeholder="Ваш текст" />
+    <BTextarea v-model="text" :rows="3" placeholder="Ваш текст" required :error="errors.text" />
 
     <div v-if="keptMedia.length" class="flex flex-wrap gap-2">
       <BPreview
@@ -77,7 +89,7 @@ async function onSubmit() {
     </p>
 
     <div class="flex gap-2">
-      <BBtn type="submit" variant="primary" size="sm" :loading="loading" :disabled="!text.trim()">
+      <BBtn type="submit" variant="primary" size="sm" :loading="loading">
         {{ submitLabel }}
       </BBtn>
       <BBtn type="button" variant="ghost" size="sm" @click="emit('cancel')">

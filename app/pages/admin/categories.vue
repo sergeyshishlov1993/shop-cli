@@ -8,6 +8,7 @@ import {
 } from '~/modules/admin/adminApi'
 import { useToast } from '~/modules/ui/composables/useToast'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
@@ -39,6 +40,14 @@ const emptyForm = (): AdminCategoryInput => ({
   focalYMobile: 0.5,
 })
 const form = reactive(emptyForm()) as Required<AdminCategoryInput>
+const { errors, validate, touch, reset, applyServerErrors } = useFormValidation({
+  name: [() => form.name, [rules.required('Вкажіть назву')]],
+  slug: [() => form.slug, [rules.required('Вкажіть slug'), rules.slug()]],
+  sortOrder: [() => form.sortOrder, [rules.integer(), rules.min(0, 'Значення не може бути відʼємним')]],
+})
+const sizeChartValidation = useFormValidation({
+  columns: [() => sizeChartColumns.value.split(';').map(item => item.trim()).filter(Boolean), [rules.required('Вкажіть хоча б одну колонку')]],
+})
 // Плитка категорії на десктопі/планшеті — 3:4, на телефоні — банер 375×464
 const categoryRatios = { desktop: 3 / 4, tablet: 3 / 4, mobile: 375 / 464 }
 const categoryImageUrl = computed(() => {
@@ -68,6 +77,7 @@ async function loadCategories() {
 
 function openCreate(parentId: number | null = null) {
   editingId.value = null
+  reset()
   Object.assign(form, emptyForm(), { parentId })
   const parent = categories.value.find(category => category.id === parentId)
   if (parent?.productType) form.productType = parent.productType
@@ -76,6 +86,7 @@ function openCreate(parentId: number | null = null) {
 
 function openEdit(category: AdminCategory) {
   editingId.value = category.id
+  reset()
   Object.assign(form, {
     name: category.name,
     slug: category.slug,
@@ -100,10 +111,7 @@ function slugify(value: string) {
 }
 
 async function saveCategory() {
-  if (!form.name.trim() || !form.slug.trim()) {
-    toast.error('Заповніть назву та slug')
-    return
-  }
+  if (!validate()) return
   isSaving.value = true
   try {
     const payload: AdminCategoryInput = {
@@ -123,7 +131,8 @@ async function saveCategory() {
     isDialogOpen.value = false
     await loadCategories()
   } catch (error) {
-    toast.error(getAdminError(error, 'Не вдалося зберегти категорію'))
+    const rest = applyServerErrors(error)
+    if (rest.length || !Object.values(errors).some(Boolean)) toast.error(getAdminError(error, 'Не вдалося зберегти категорію'))
   } finally {
     isSaving.value = false
   }
@@ -152,6 +161,7 @@ async function removeCategory(category: AdminCategory) {
 
 async function openSizeChart(category: AdminCategory) {
   sizeChartCategory.value = category
+  sizeChartValidation.reset()
   try {
     const chart = await adminApi.sizeChart(category.id)
     if (chart) {
@@ -166,7 +176,7 @@ async function openSizeChart(category: AdminCategory) {
 }
 
 async function saveSizeChart() {
-  if (!sizeChartCategory.value) return
+  if (!sizeChartCategory.value || !sizeChartValidation.validate()) return
   const columns = sizeChartColumns.value.split(';').map(item => item.trim()).filter(Boolean)
   const rows = sizeChartRows.value.split('\n').map(line => line.split(';').map(item => item.trim())).filter(row => row.some(Boolean))
   try { await adminApi.upsertSizeChart(sizeChartCategory.value.id, { columns, rows }); sizeChartDialog.value = false; toast.success('Таблицю розмірів збережено') } catch (error) { toast.error(getAdminError(error)) }
@@ -209,9 +219,9 @@ await loadCategories()
     <BBtn class="fixed bottom-24 right-4 z-30 !size-14 !rounded-full !p-0 shadow-lg lg:hidden" aria-label="Додати" @click="openCreate()"><Icon name="lucide:plus" size="24" /></BBtn>
 
     <AdminDialog v-model="isDialogOpen" :title="editingId ? 'Редагувати категорію' : 'Нова категорія'">
-      <form class="space-y-5" @submit.prevent="saveCategory">
-        <BInput v-model="form.name" label="Назва" required @blur="!editingId && !form.slug && (form.slug = slugify(form.name))" />
-        <BInput v-model="form.slug" label="Slug" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required />
+      <form novalidate class="space-y-5" @submit.prevent="saveCategory">
+        <BInput v-model="form.name" label="Назва" required :error="errors.name" @blur="!editingId && !form.slug && (form.slug = slugify(form.name)); touch('name')" />
+        <BInput v-model="form.slug" label="Slug" required :error="errors.slug" @blur="touch('slug')" />
         <BSelect
           v-model="parentIdSelect"
           label="Батьківська категорія"
@@ -219,7 +229,7 @@ await loadCategories()
         />
         <div class="grid gap-4 sm:grid-cols-2">
           <BSelect v-model="form.productType" label="Тип товарів" :options="[{ label: 'Одяг', value: 'CLOTHING' }, { label: 'Взуття', value: 'SHOES' }, { label: 'Аксесуари', value: 'ACCESSORY' }]" />
-          <BInput v-model.number="form.sortOrder" type="number" label="Порядок" />
+          <BInput v-model.number="form.sortOrder" type="number" label="Порядок" :error="errors.sortOrder" @blur="touch('sortOrder')" />
         </div>
         <BCheckbox v-model="form.isActive" label="Категорія активна і видима на вітрині" />
         <AdminImageFocalField :form="form" :current-url="categoryImageUrl" :ratios="categoryRatios" label="Фото категорії (плитка на головній)" />
@@ -230,7 +240,7 @@ await loadCategories()
       </form>
     </AdminDialog>
     <AdminDialog v-model="sizeChartDialog" :title="`Таблиця розмірів: ${sizeChartCategory?.name || ''}`" wide>
-      <div class="space-y-4"><p class="text-sm text-gray-500">Колонки та значення розділяйте крапкою з комою; кожен розмір — з нового рядка.</p><BInput v-model="sizeChartColumns" label="Колонки" /><BTextarea v-model="sizeChartRows" label="Рядки" :rows="8" /><div class="flex justify-end"><BBtn @click="saveSizeChart">Зберегти таблицю</BBtn></div></div>
+      <div class="space-y-4"><p class="text-sm text-gray-500">Колонки та значення розділяйте крапкою з комою; кожен розмір — з нового рядка.</p><BInput v-model="sizeChartColumns" label="Колонки" required :error="sizeChartValidation.errors.columns" @blur="sizeChartValidation.touch('columns')" /><BTextarea v-model="sizeChartRows" label="Рядки" :rows="8" /><div class="flex justify-end"><BBtn @click="saveSizeChart">Зберегти таблицю</BBtn></div></div>
     </AdminDialog>
   </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { adminApi, getAdminError } from '~/modules/admin/adminApi'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
@@ -32,6 +33,11 @@ async function doYml() {
 
 // Индексы колонок (-1 = не выбрано)
 const map = reactive({ sku: -1, price: -1, stockQty: -1 })
+const col = (i: number) => (i === -1 ? '' : i)
+const { errors, validate, reset, applyServerErrors } = useFormValidation({
+  sku: [() => col(map.sku), [rules.required('Оберіть колонку SKU')]],
+  price: [() => col(map.price) === '' ? col(map.stockQty) : map.price, [rules.required('Оберіть колонку ціни або залишку')]],
+})
 
 const columnOptions = computed(() => [
   { label: '— не використовувати —', value: -1 },
@@ -54,6 +60,7 @@ async function doPreview() {
   try {
     preview.value = await adminApi.importPreview(file.value)
     Object.assign(map, { sku: -1, price: -1, stockQty: -1 })
+    reset()
     guessMapping(preview.value.headers)
   }
   catch (e) {
@@ -65,14 +72,7 @@ async function doPreview() {
 }
 
 async function doRun() {
-  if (!file.value || map.sku === -1) {
-    toast.error('Оберіть колонку SKU')
-    return
-  }
-  if (map.price === -1 && map.stockQty === -1) {
-    toast.error('Оберіть колонку ціни або залишку')
-    return
-  }
+  if (!validate() || !file.value) return
   running.value = true
   try {
     report.value = await adminApi.importStock(file.value, {
@@ -83,7 +83,8 @@ async function doRun() {
     toast.success(`Оновлено: ${report.value.updated}`)
   }
   catch (e) {
-    toast.error(getAdminError(e))
+    const rest = applyServerErrors(e)
+    if (rest.length || !Object.values(errors).some(Boolean)) toast.error(getAdminError(e))
   }
   finally {
     running.value = false
@@ -105,8 +106,8 @@ async function doRun() {
       <p class="text-sm text-secondary-600">Рядків з даними: {{ preview.totalRows }}</p>
 
       <div class="grid gap-3 sm:grid-cols-3">
-        <BSelect v-model.number="map.sku" label="Колонка SKU *" :options="columnOptions" />
-        <BSelect v-model.number="map.price" label="Колонка ціни" :options="columnOptions" />
+        <BSelect v-model.number="map.sku" label="Колонка SKU" required :error="errors.sku" :options="columnOptions" />
+        <BSelect v-model.number="map.price" label="Колонка ціни" :error="errors.price" :options="columnOptions" />
         <BSelect v-model.number="map.stockQty" label="Колонка залишку" :options="columnOptions" />
       </div>
 

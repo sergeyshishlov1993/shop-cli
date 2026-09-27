@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useToast } from '~/modules/ui/composables/useToast'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,36 +14,12 @@ const form = reactive({
   confirmPassword: '',
 })
 
-const errors = reactive({
-  newPassword: '',
-  confirmPassword: '',
-})
-
 const isLoading = ref(false)
 
-function validate(): boolean {
-  let isValid = true
-  errors.newPassword = ''
-  errors.confirmPassword = ''
-
-  if (!form.newPassword) {
-    errors.newPassword = 'Пароль обов\'язковий'
-    isValid = false
-  } else if (form.newPassword.length < 6) {
-    errors.newPassword = 'Мінімум 6 символів'
-    isValid = false
-  }
-
-  if (!form.confirmPassword) {
-    errors.confirmPassword = 'Підтвердіть пароль'
-    isValid = false
-  } else if (form.confirmPassword !== form.newPassword) {
-    errors.confirmPassword = 'Паролі не співпадають'
-    isValid = false
-  }
-
-  return isValid
-}
+const { errors, validate, touch, applyServerErrors } = useFormValidation({
+  newPassword: [() => form.newPassword, [rules.required('Пароль обов\'язковий'), rules.minLength(6)]],
+  confirmPassword: [() => form.confirmPassword, [rules.required('Підтвердіть пароль'), rules.sameAs(() => form.newPassword, 'Паролі не співпадають')]],
+})
 
 async function handleSubmit() {
   if (!validate()) return
@@ -64,7 +41,9 @@ async function handleSubmit() {
     toast.success('Пароль успішно змінено')
     await router.push('/login')
   } catch (error: unknown) {
-    toast.error(error instanceof Error ? error.message : 'Помилка зміни паролю')
+    const rest = applyServerErrors(error)
+    if (rest.length) toast.error(rest.join('. '))
+    else if (!errors.newPassword) toast.error(error instanceof Error ? error.message : 'Помилка зміни паролю')
   } finally {
     isLoading.value = false
   }
@@ -72,7 +51,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <form
+  <form novalidate
     class="space-y-5"
     @submit.prevent="handleSubmit"
   >
@@ -90,6 +69,7 @@ async function handleSubmit() {
       placeholder="Мінімум 6 символів"
       :error="errors.newPassword"
       required
+      @blur="touch('newPassword')"
     />
 
     <BPasswordInput
@@ -98,6 +78,7 @@ async function handleSubmit() {
       placeholder="Повторіть пароль"
       :error="errors.confirmPassword"
       required
+      @blur="touch('confirmPassword')"
     />
 
     <BBtn

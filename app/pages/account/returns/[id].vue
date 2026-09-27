@@ -3,6 +3,7 @@ import ReturnProgress from '~/modules/returns/components/ReturnProgress.vue'
 import { getApiError, returnFlow, returnFlowLabels, returnReasonLabels, returnsApi, returnStatusLabels, returnStatusVariants } from '~/modules/returns/returns'
 import ReturnThumb from '~/modules/returns/components/ReturnThumb.vue'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 definePageMeta({ layout: 'account', middleware: ['auth', 'returns-enabled'] })
 
@@ -16,6 +17,9 @@ useSeoMeta({ title: () => ret.value ? `Повернення ${ret.value.number}`
 
 const busy = ref(false)
 const tracking = ref('')
+const { errors, validate, touch, reset, applyServerErrors } = useFormValidation({
+  trackingNumber: [() => tracking.value, [rules.required('Вкажіть номер ТТН'), rules.maxLength(64)]],
+})
 
 const isTerminalFail = computed(() => ret.value?.status === 'REJECTED' || ret.value?.status === 'CANCELLED')
 const currentStep = computed(() => {
@@ -41,10 +45,13 @@ async function cancel() {
 }
 
 async function saveTracking() {
-  if (!ret.value || !tracking.value.trim()) return
+  if (!ret.value || !validate()) return
   busy.value = true
-  try { ret.value = await returnsApi.setTracking(ret.value.id, tracking.value.trim()); toast.success('Номер ТТН збережено') }
-  catch (e) { toast.error(getApiError(e, 'Не вдалося зберегти ТТН')) }
+  try { ret.value = await returnsApi.setTracking(ret.value.id, tracking.value.trim()); reset(); toast.success('Номер ТТН збережено') }
+  catch (e) {
+    const rest = applyServerErrors(e)
+    if (rest.length || !Object.values(errors).some(Boolean)) toast.error(getApiError(e, 'Не вдалося зберегти ТТН'))
+  }
   finally { busy.value = false }
 }
 </script>
@@ -103,9 +110,9 @@ async function saveTracking() {
           <div class="min-w-0 flex-1">
             <h2 class="font-semibold text-secondary-900">Заявку схвалено</h2>
             <p class="mt-1 text-sm text-secondary-700">Відправте посилку Новою Поштою на адресу магазину, вкажіть номер ТТН.</p>
-            <form class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end" @submit.prevent="saveTracking">
-              <BInput v-model="tracking" label="Номер ТТН" :placeholder="ret.trackingNumber || '20450000000000'" class="flex-1" />
-              <BBtn type="submit" :loading="busy" :disabled="!tracking.trim()">{{ ret.trackingNumber ? 'Оновити' : 'Зберегти' }}</BBtn>
+            <form novalidate class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end" @submit.prevent="saveTracking">
+              <BInput v-model="tracking" label="Номер ТТН" :placeholder="ret.trackingNumber || '20450000000000'" class="flex-1" required :error="errors.trackingNumber" @blur="touch('trackingNumber')" />
+              <BBtn type="submit" :loading="busy" >{{ ret.trackingNumber ? 'Оновити' : 'Зберегти' }}</BBtn>
             </form>
             <p v-if="ret.trackingNumber" class="mt-2 text-sm text-secondary-600">Збережена ТТН: <b>{{ ret.trackingNumber }}</b></p>
           </div>

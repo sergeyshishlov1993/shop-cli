@@ -9,6 +9,7 @@ import { orderApi } from '~/modules/order/orderApi'
 import AddToCartBtn from '~/modules/cart/components/AddToCartBtn.vue'
 import ReviewsList from '~/modules/review/components/ReviewsList.vue'
 import { catalogApi } from '~/modules/catalog/catalogApi'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 import ProductGallery from '~/modules/catalog/components/ProductGallery/ProductGallery.vue'
 
 const route = useRoute()
@@ -58,6 +59,11 @@ const sizeChartLoaded = ref(false)
 const quickBuyForm = ref({
   name: '',
   phone: '',
+})
+
+const quickBuyV = useFormValidation({
+  name: [() => quickBuyForm.value.name, [rules.required('Вкажіть імʼя')]],
+  phone: [() => quickBuyForm.value.phone, [rules.required('Вкажіть телефон'), rules.phoneUa()]],
 })
 
 const breadcrumbs = computed(() => {
@@ -190,11 +196,12 @@ function openQuickBuy() {
     name: user ? [user.firstName, user.lastName].filter(Boolean).join(' ') : '',
     phone: user?.phone ?? '',
   }
+  quickBuyV.reset()
   isQuickBuyOpen.value = true
 }
 
 async function submitQuickBuy() {
-  if (!currentVariant.value || !quickBuyForm.value.name.trim() || !quickBuyForm.value.phone.trim()) return
+  if (!quickBuyV.validate() || !currentVariant.value) return
 
   isQuickBuySubmitting.value = true
   try {
@@ -211,8 +218,9 @@ async function submitQuickBuy() {
     isQuickBuyOpen.value = false
     toast.success('Замовлення оформлено!')
     await router.push('/')
-  } catch {
-    toast.error('Помилка при оформленні замовлення')
+  } catch (e) {
+    const rest = quickBuyV.applyServerErrors(e)
+    if (rest.length || !Object.values(quickBuyV.errors).some(Boolean)) toast.error(rest.join('. ') || 'Помилка при оформленні замовлення')
   } finally {
     isQuickBuySubmitting.value = false
   }
@@ -266,14 +274,21 @@ useHead(() => (jsonLdScript.value
 const stockEmail = ref('')
 const stockSubscribed = ref(false)
 const stockLoading = ref(false)
+const stockV = useFormValidation({
+  email: [() => stockEmail.value, [rules.required('Вкажіть email'), rules.email()]],
+})
 async function subscribeStock() {
-  if (!product.value || !stockEmail.value.trim()) return
+  if (!stockV.validate() || !product.value) return
   stockLoading.value = true
   try {
     await catalogApi.subscribeStock(product.value.id, stockEmail.value.trim())
     stockSubscribed.value = true
   }
-  catch { /* показываем нейтрально, деталь не критична */ }
+  catch (e) {
+    // деталь не критична: показываем только ошибки валидации сервера
+    const rest = stockV.applyServerErrors(e)
+    if (rest.length) toast.error(rest.join('. '))
+  }
   finally { stockLoading.value = false }
 }
 
@@ -444,8 +459,8 @@ watch(isSizeChartOpen, async (isOpen) => {
               <template v-else>
                 <p class="mb-2 text-sm text-amber-800">Підпишіться — повідомимо про надходження.</p>
                 <div class="flex gap-2">
-                  <BInput v-model="stockEmail" type="email" placeholder="Ваш email" class="flex-1" />
-                  <BBtn :disabled="!stockEmail.trim()" :loading="stockLoading" @click="subscribeStock">Підписатися</BBtn>
+                  <BInput v-model="stockEmail" type="email" placeholder="Ваш email" class="flex-1" required :error="stockV.errors.email" @blur="stockV.touch('email')" />
+                  <BBtn :loading="stockLoading" @click="subscribeStock">Підписатися</BBtn>
                 </div>
               </template>
             </div>
@@ -620,6 +635,9 @@ watch(isSizeChartOpen, async (isOpen) => {
               v-model="quickBuyForm.name"
               label="Ім'я та прізвище"
               placeholder="Введіть ім'я"
+              required
+              :error="quickBuyV.errors.name"
+              @blur="quickBuyV.touch('name')"
           />
 
           <BInput
@@ -627,6 +645,9 @@ watch(isSizeChartOpen, async (isOpen) => {
               mode="phone"
               label="Телефон"
               placeholder="+380"
+              required
+              :error="quickBuyV.errors.phone"
+              @blur="quickBuyV.touch('phone')"
           />
         </div>
 
@@ -635,7 +656,6 @@ watch(isSizeChartOpen, async (isOpen) => {
               variant="primary"
               block
               :loading="isQuickBuySubmitting"
-              :disabled="!quickBuyForm.name.trim() || !quickBuyForm.phone.trim()"
               @click="submitQuickBuy"
           >
             Оформити замовлення

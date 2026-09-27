@@ -1,29 +1,17 @@
 <script setup lang="ts">
 import { useToast } from '~/modules/ui/composables/useToast'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 const { $api } = useNuxtApp()
 const toast = useToast()
 
 const email = ref('')
-const emailError = ref('')
 const isLoading = ref(false)
 const isSubmitted = ref(false)
 
-function validate(): boolean {
-  emailError.value = ''
-
-  if (!email.value.trim()) {
-    emailError.value = 'Email обов\'язковий'
-    return false
-  }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-    emailError.value = 'Невірний формат email'
-    return false
-  }
-
-  return true
-}
+const { errors, validate, touch, applyServerErrors } = useFormValidation({
+  email: [() => email.value, [rules.required('Email обов\'язковий'), rules.email()]],
+})
 
 async function handleSubmit() {
   if (!validate()) return
@@ -36,7 +24,9 @@ async function handleSubmit() {
     })
     isSubmitted.value = true
   } catch (error: unknown) {
-    toast.error(error instanceof Error ? error.message : 'Помилка відправки')
+    const rest = applyServerErrors(error)
+    if (rest.length) toast.error(rest.join('. '))
+    else if (!errors.email) toast.error(error instanceof Error ? error.message : 'Помилка відправки')
   } finally {
     isLoading.value = false
   }
@@ -72,7 +62,7 @@ async function handleSubmit() {
       </NuxtLink>
     </template>
 
-    <form
+    <form novalidate
       v-else
       class="space-y-5"
       @submit.prevent="handleSubmit"
@@ -86,8 +76,9 @@ async function handleSubmit() {
         type="email"
         label="Email"
         placeholder="your@email.com"
-        :error="emailError"
+        :error="errors.email"
         required
+        @blur="touch('email')"
       />
 
       <BBtn

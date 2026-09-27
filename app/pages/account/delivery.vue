@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAccountStore } from '~/modules/account/accountStore'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 definePageMeta({ layout: 'account', middleware: 'auth' })
 
@@ -23,6 +24,15 @@ const form = reactive({
   isDefault: false,
 })
 
+const { errors, validate, touch, reset, applyServerErrors } = useFormValidation({
+  title: [() => form.title, [rules.required('Вкажіть назву адреси')]],
+  recipientFirstName: [() => form.recipientFirstName, [rules.required('Вкажіть імʼя отримувача')]],
+  recipientLastName: [() => form.recipientLastName, [rules.required('Вкажіть прізвище отримувача')]],
+  recipientPhone: [() => form.recipientPhone, [rules.required('Вкажіть телефон'), rules.phoneUa()]],
+  deliveryProvider: [() => form.deliveryProvider, [rules.required('Оберіть спосіб доставки')]],
+  city: [() => form.city, [rules.required('Вкажіть місто')]],
+})
+
 const providerOptions = [
   { label: 'Нова Пошта', value: 'NOVA_POSHTA' },
   { label: 'Курʼєрська доставка', value: 'COURIER' },
@@ -35,6 +45,7 @@ await useAsyncData('delivery-profiles', async () => {
 
 function resetForm() {
   editingId.value = null
+  reset()
   Object.assign(form, {
     title: '', recipientFirstName: '', recipientLastName: '', recipientPhone: '',
     deliveryProvider: 'NOVA_POSHTA', city: '', warehouse: '', addressLine: '',
@@ -49,6 +60,7 @@ function openCreate() {
 
 function openEdit(profile: DeliveryProfile) {
   editingId.value = profile.id
+  reset()
   Object.assign(form, {
     title: profile.title,
     recipientFirstName: profile.recipientFirstName,
@@ -66,7 +78,7 @@ function openEdit(profile: DeliveryProfile) {
 }
 
 async function saveProfile() {
-  if (!form.title.trim() || !form.recipientFirstName.trim() || !form.recipientLastName.trim() || !form.recipientPhone || !form.city.trim()) return
+  if (!validate()) return
   saving.value = true
   const dto = {
     title: form.title.trim(),
@@ -87,8 +99,9 @@ async function saveProfile() {
     isFormOpen.value = false
     toast.success('Адресу збережено')
   }
-  catch {
-    toast.error('Не вдалося зберегти адресу')
+  catch (e) {
+    const rest = applyServerErrors(e)
+    if (rest.length || !Object.values(errors).some(Boolean)) toast.error(rest.join('. ') || 'Не вдалося зберегти адресу')
   }
   finally {
     saving.value = false
@@ -141,13 +154,13 @@ useSeoMeta({ title: 'Адреси доставки', robots: 'noindex, nofollow'
     </div>
 
     <BModal v-model="isFormOpen" :title="editingId ? 'Редагувати адресу' : 'Нова адреса'" size="lg">
-      <form class="grid gap-4 sm:grid-cols-2" @submit.prevent="saveProfile">
-        <BInput v-model="form.title" label="Назва адреси" required class="sm:col-span-2" />
-        <BInput v-model="form.recipientFirstName" label="Імʼя отримувача" required />
-        <BInput v-model="form.recipientLastName" label="Прізвище отримувача" required />
-        <BPhoneInput v-model="form.recipientPhone" label="Телефон" required />
-        <BSelect v-model="form.deliveryProvider" :options="providerOptions" label="Спосіб доставки" required />
-        <BInput v-model="form.city" label="Місто" required />
+      <form novalidate class="grid gap-4 sm:grid-cols-2" @submit.prevent="saveProfile">
+        <BInput :error="errors.title" @blur="touch('title')" v-model="form.title" label="Назва адреси" required class="sm:col-span-2" />
+        <BInput :error="errors.recipientFirstName" @blur="touch('recipientFirstName')" v-model="form.recipientFirstName" label="Імʼя отримувача" required />
+        <BInput :error="errors.recipientLastName" @blur="touch('recipientLastName')" v-model="form.recipientLastName" label="Прізвище отримувача" required />
+        <BPhoneInput :error="errors.recipientPhone" v-model="form.recipientPhone" label="Телефон" required />
+        <BSelect :error="errors.deliveryProvider" v-model="form.deliveryProvider" :options="providerOptions" label="Спосіб доставки" required />
+        <BInput :error="errors.city" @blur="touch('city')" v-model="form.city" label="Місто" required />
         <BInput v-if="form.deliveryProvider === 'NOVA_POSHTA'" v-model="form.warehouse" label="Відділення" />
         <BInput v-else v-model="form.addressLine" label="Адреса" />
         <BInput v-model="form.postalCode" label="Поштовий індекс" />

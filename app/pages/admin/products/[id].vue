@@ -4,6 +4,7 @@ import AdminDialog from '~/modules/admin/components/AdminDialog.vue'
 import AdminProductMedia from '~/modules/admin/components/AdminProductMedia.vue'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
 import { getFileUrl } from '~/modules/common/helpers/fileUrl'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
@@ -18,6 +19,13 @@ const colors = ref<AdminColor[]>([])
 const variantDialog = ref(false)
 const editingVariantId = ref<number | null>(null)
 const variantForm = reactive({ sku: '', barcode: '', sizeId: 0, colorId: 0, price: null as number | null, stockQty: 0, reservedQty: 0, isActive: true })
+const stockRules = [rules.integer(), rules.min(0, 'Значення не може бути відʼємним')]
+const { errors, validate, touch, reset, applyServerErrors } = useFormValidation({
+  sku: [() => variantForm.sku, [rules.required('Вкажіть SKU')]],
+  price: [() => variantForm.price, [rules.number(), rules.positive()]],
+  stockQty: [() => variantForm.stockQty, stockRules],
+  reservedQty: [() => variantForm.reservedQty, stockRules],
+})
 
 const wearWith = ref<AdminWearWithItem[]>([])
 const wearSearchOptions = ref<AdminProduct[]>([])
@@ -39,10 +47,12 @@ function openVariant(variant?: AdminVariant) {
     sku: variant.sku, barcode: variant.barcode ?? '', sizeId: variant.sizeId ?? 0, colorId: variant.colorId ?? 0, price: variant.price,
     stockQty: variant.stockQty, reservedQty: variant.reservedQty, isActive: variant.isActive,
   } : { sku: '', barcode: '', sizeId: 0, colorId: 0, price: null, stockQty: 0, reservedQty: 0, isActive: true })
+  reset()
   variantDialog.value = true
 }
 
 async function saveVariant() {
+  if (!validate()) return
   try {
     const dto = { ...variantForm, sizeId: variantForm.sizeId || undefined, colorId: variantForm.colorId || undefined, price: variantForm.price ?? undefined }
     if (editingVariantId.value) await adminApi.updateVariant(productId, editingVariantId.value, dto)
@@ -50,7 +60,10 @@ async function saveVariant() {
     variantDialog.value = false
     variants.value = await adminApi.variants(productId)
     toast.success('Варіант збережено')
-  } catch (error) { toast.error(getAdminError(error)) }
+  } catch (error) {
+    const rest = applyServerErrors(error)
+    if (rest.length || !Object.values(errors).some(Boolean)) toast.error(getAdminError(error))
+  }
 }
 
 async function removeVariant(id: number) {
@@ -152,14 +165,14 @@ await load()
     </section>
 
     <AdminDialog v-model="variantDialog" :title="editingVariantId ? 'Редагувати варіант' : 'Новий варіант'">
-      <form class="grid gap-4 sm:grid-cols-2" @submit.prevent="saveVariant">
-        <BInput v-model="variantForm.sku" label="SKU" required />
+      <form novalidate class="grid gap-4 sm:grid-cols-2" @submit.prevent="saveVariant">
+        <BInput v-model="variantForm.sku" label="SKU" required :error="errors.sku" @blur="touch('sku')" />
         <BInput v-model="variantForm.barcode" label="Штрихкод" inputmode="numeric" />
-        <BInput v-model.number="variantForm.price" type="number" label="Ціна (порожньо = базова)" />
+        <BInput v-model.number="variantForm.price" type="number" label="Ціна (порожньо = базова)" :error="errors.price" @blur="touch('price')" />
         <BSelect v-model.number="variantForm.sizeId" label="Розмір" :options="[{ label: 'Без розміру', value: 0 }, ...sizes.map(size => ({ label: size.name, value: size.id }))]" />
         <BSelect v-model.number="variantForm.colorId" label="Колір" :options="[{ label: 'Без кольору', value: 0 }, ...colors.map(color => ({ label: color.name, value: color.id }))]" />
-        <BInput v-model.number="variantForm.stockQty" type="number" label="Залишок" />
-        <BInput v-if="editingVariantId" v-model.number="variantForm.reservedQty" type="number" label="Резерв" />
+        <BInput v-model.number="variantForm.stockQty" type="number" label="Залишок" :error="errors.stockQty" @blur="touch('stockQty')" />
+        <BInput v-if="editingVariantId" v-model.number="variantForm.reservedQty" type="number" label="Резерв" :error="errors.reservedQty" @blur="touch('reservedQty')" />
         <BCheckbox v-model="variantForm.isActive" label="Активний" class="sm:col-span-2" />
         <div class="flex justify-end gap-3 border-t border-secondary-200 pt-4 sm:col-span-2">
           <BBtn variant="outline" type="button" @click="variantDialog = false">Скасувати</BBtn>

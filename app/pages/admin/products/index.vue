@@ -11,6 +11,7 @@ import {
 } from '~/modules/admin/adminApi'
 import { useToast } from '~/modules/ui/composables/useToast'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
@@ -49,6 +50,16 @@ const emptyForm = (): AdminProductInput => ({
 
 const form = reactive<AdminProductInput>(emptyForm())
 
+const nonNegative = [rules.number(), rules.min(0, 'Значення не може бути відʼємним')]
+const { errors, validate, touch, reset, applyServerErrors } = useFormValidation({
+  name: [() => form.name, [rules.required('Вкажіть назву')]],
+  slug: [() => form.slug, [rules.required('Вкажіть slug'), rules.slug()]],
+  categoryId: [() => form.categoryId || '', [rules.required('Оберіть категорію')]],
+  basePrice: [() => form.basePrice, [rules.required('Вкажіть ціну'), rules.number(), rules.positive()]],
+  oldPrice: [() => form.oldPrice, nonNegative],
+  purchaseCost: [() => form.purchaseCost, nonNegative],
+})
+
 const flatCategories = computed(() => categories.value.flatMap(category => [
   category,
   ...(category.children ?? []),
@@ -78,6 +89,7 @@ const loadCategories = async () => (categories.value = await adminApi.categories
 function resetForm() {
   Object.assign(form, emptyForm())
   editingId.value = null
+  reset()
 }
 
 function openCreate() {
@@ -92,6 +104,7 @@ function openCreate() {
 
 function openEdit(product: AdminProduct) {
   editingId.value = product.id
+  reset()
   Object.assign(form, {
     name: product.name,
     slug: product.slug,
@@ -123,10 +136,7 @@ function syncProductType() {
 }
 
 async function saveProduct() {
-  if (!form.name.trim() || !form.slug.trim() || !form.categoryId || form.basePrice < 0) {
-    toast.error('Заповніть назву, slug, категорію та коректну ціну')
-    return
-  }
+  if (!validate()) return
 
   isSaving.value = true
   try {
@@ -153,7 +163,8 @@ async function saveProduct() {
     isDialogOpen.value = false
     await loadProducts()
   } catch (error) {
-    toast.error(getAdminError(error, 'Не вдалося зберегти товар'))
+    const rest = applyServerErrors(error)
+    if (rest.length || !Object.values(errors).some(Boolean)) toast.error(getAdminError(error, 'Не вдалося зберегти товар'))
   } finally {
     isSaving.value = false
   }
@@ -198,7 +209,7 @@ if (route.query.create) { openCreate(); navigateTo({ query: {} }, { replace: tru
       </BBtn>
     </div>
 
-    <form class="grid gap-3 rounded-xl border border-secondary-200 bg-white p-4 sm:grid-cols-[1fr_180px_auto]" @submit.prevent="applyFilters">
+    <form novalidate class="grid gap-3 rounded-xl border border-secondary-200 bg-white p-4 sm:grid-cols-[1fr_180px_auto]" @submit.prevent="applyFilters">
       <BInput v-model="search" class="w-full" placeholder="Пошук за назвою, slug або SKU" />
       <BSelect v-model="activeFilter" class="w-full" :options="[{ label: 'Усі статуси', value: '' }, { label: 'Активні', value: 'true' }, { label: 'Приховані', value: 'false' }]" />
       <BBtn type="submit" variant="outline" class="w-full">Знайти</BBtn>
@@ -229,21 +240,22 @@ if (route.query.create) { openCreate(); navigateTo({ query: {} }, { replace: tru
     <BPagination v-if="totalPages > 1" :page="page" :total-pages="totalPages" @update:page="changePage" />
 
     <AdminDialog v-model="isDialogOpen" :title="editingId ? 'Редагувати товар' : 'Новий товар'" wide>
-      <form class="grid gap-5 sm:grid-cols-2" @submit.prevent="saveProduct">
-        <BInput v-model="form.name" label="Назва" required @blur="!editingId && !form.slug && (form.slug = slugify(form.name))" />
-        <BInput v-model="form.slug" label="Slug" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required />
+      <form novalidate class="grid gap-5 sm:grid-cols-2" @submit.prevent="saveProduct">
+        <BInput v-model="form.name" label="Назва" required :error="errors.name" @blur="!editingId && !form.slug && (form.slug = slugify(form.name)); touch('name')" />
+        <BInput v-model="form.slug" label="Slug" required :error="errors.slug" @blur="touch('slug')" />
         <BSelect
           v-model="form.categoryId"
           label="Категорія"
           placeholder="Оберіть категорію"
           required
+          :error="errors.categoryId"
           :options="categories.flatMap(category => [{ label: category.name, value: category.id }, ...(category.children ?? []).map(child => ({ label: `— ${child.name}`, value: child.id }))])"
           @update:model-value="syncProductType"
         />
         <BSelect v-model="form.productType" label="Тип товару" :options="[{ label: 'Одяг', value: 'CLOTHING' }, { label: 'Взуття', value: 'SHOES' }, { label: 'Аксесуар', value: 'ACCESSORY' }]" />
-        <BInput v-model.number="form.basePrice" type="number" label="Ціна" required />
-        <BInput v-model.number="form.oldPrice" type="number" label="Стара ціна" />
-        <BInput v-model.number="form.purchaseCost" type="number" label="Собівартість" />
+        <BInput v-model.number="form.basePrice" type="number" label="Ціна" required :error="errors.basePrice" @blur="touch('basePrice')" />
+        <BInput v-model.number="form.oldPrice" type="number" label="Стара ціна" :error="errors.oldPrice" @blur="touch('oldPrice')" />
+        <BInput v-model.number="form.purchaseCost" type="number" label="Собівартість" :error="errors.purchaseCost" @blur="touch('purchaseCost')" />
         <BInput v-model="form.brand" label="Бренд" />
         <BInput v-model="form.season" label="Сезон" />
         <BInput v-model="form.material" label="Матеріал" />

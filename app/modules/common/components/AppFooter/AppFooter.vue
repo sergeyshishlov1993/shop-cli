@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useCatalogStore } from '~/modules/catalog/catalogStore'
 import { useSettingsStore } from '~/modules/settings/settingsStore'
 import { newsletterApi } from '~/modules/newsletter/newsletterApi'
+import { rules, useFormValidation } from '~/modules/common/composables/useFormValidation'
 
 const catalogStore = useCatalogStore()
 const settingsStore = useSettingsStore()
@@ -12,15 +13,20 @@ const settings = computed(() => settingsStore.settings)
 const nlEmail = ref('')
 const nlState = ref<'idle' | 'sent' | 'done' | 'error'>('idle')
 const nlLoading = ref(false)
+const nlV = useFormValidation({
+  email: [() => nlEmail.value, [rules.required('Вкажіть email'), rules.email()]],
+})
 async function subscribeNewsletter() {
-  if (!nlEmail.value.trim()) return
+  if (!nlV.validate()) return
+  nlState.value = 'idle'
   nlLoading.value = true
   try {
     const r = await newsletterApi.subscribe(nlEmail.value.trim(), 'footer')
     nlState.value = r.status === 'already_confirmed' ? 'done' : 'sent'
   }
-  catch {
-    nlState.value = 'error'
+  catch (e) {
+    const rest = nlV.applyServerErrors(e)
+    if (rest.length || !nlV.errors.email) nlState.value = 'error'
   }
   finally {
     nlLoading.value = false
@@ -143,17 +149,18 @@ await useAsyncData('footer-data', async () => {
             <p v-else-if="nlState === 'done'" class="text-sm text-gray-700">
               Ви вже підписані. Дякуємо!
             </p>
-            <form v-else class="flex gap-2" @submit.prevent="subscribeNewsletter">
+            <form novalidate v-else class="flex gap-2" @submit.prevent="subscribeNewsletter">
               <BInput
                 v-model="nlEmail"
                 type="email"
                 required
                 placeholder="Email для новин та акцій"
                 class="min-w-0 flex-1"
+                :error="nlV.errors.email"
+                @blur="nlV.touch('email')"
               />
               <BBtn
                 type="submit"
-                :disabled="!nlEmail.trim()"
                 :loading="nlLoading"
               >
                 Підписатися
