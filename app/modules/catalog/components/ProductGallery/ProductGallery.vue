@@ -13,6 +13,8 @@ const fullscreenIndex = ref(0)
 const isFullscreen = ref(false)
 const galleryRef = ref<HTMLElement | null>(null)
 const stripRef = ref<HTMLElement | null>(null)
+// Ховаємо стрілку на краю стрічки
+const { arrivedState: stripEdge } = useScroll(stripRef)
 
 const items = computed(() => [...props.media].sort((a, b) => {
   if (a.isMain && !b.isMain) return -1
@@ -136,10 +138,10 @@ const isFileVideo = (item: { mediaType: string, externalUrl?: string | null }) =
           </div>
         </div>
         <template v-if="items.length > 4">
-          <BBtn variant="icon" class="product-gallery__arrow product-gallery__arrow--prev" aria-label="Попередні" @click="stripRef?.scrollBy({ left: -stripRef.clientWidth / 4, behavior: 'smooth' })">
+          <BBtn v-show="!stripEdge.left" variant="icon" class="product-gallery__arrow product-gallery__arrow--prev" aria-label="Попередні" @click="stripRef?.scrollBy({ left: -stripRef.clientWidth / 4, behavior: 'smooth' })">
             <Icon name="lucide:chevron-left" size="20" />
           </BBtn>
-          <BBtn variant="icon" class="product-gallery__arrow product-gallery__arrow--next" aria-label="Наступні" @click="stripRef?.scrollBy({ left: stripRef.clientWidth / 4, behavior: 'smooth' })">
+          <BBtn v-show="!stripEdge.right" variant="icon" class="product-gallery__arrow product-gallery__arrow--next" aria-label="Наступні" @click="stripRef?.scrollBy({ left: stripRef.clientWidth / 4, behavior: 'smooth' })">
             <Icon name="lucide:chevron-right" size="20" />
           </BBtn>
         </template>
@@ -687,7 +689,18 @@ video.product-gallery__tile-asset {
 .product-gallery__arrow {
   position: absolute;
   top: 50%;
+  z-index: 2;
+  width: 48px !important;
+  height: 48px !important;
   transform: translateY(-50%);
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.92) !important;
+  color: #1c1917 !important;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+}
+
+.product-gallery__arrow:hover {
+  background: #fff !important;
 }
 
 .product-gallery__arrow--prev {
