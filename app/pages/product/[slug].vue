@@ -291,7 +291,7 @@ watch(isSizeChartOpen, async (isOpen) => {
         </div>
       </section>
 
-      <section class="store-container grid gap-8 py-6 lg:gap-10 lg:py-10" :class="mainPhoto ? 'lg:grid-cols-3' : 'lg:grid-cols-2'">
+      <section class="store-container grid gap-8 py-6 lg:grid-cols-2 lg:gap-10 lg:py-10">
         <div class="hidden md:block lg:col-span-full"><BBreadcrumbs :items="breadcrumbs" /></div>
 
         <!-- Головне фото (isMain) зліва, як у референсі; на мобільному його вже показує слайдер -->
@@ -299,138 +299,141 @@ watch(isSizeChartOpen, async (isOpen) => {
           <img :src="getFileUrl(mainPhoto.file, 'large')" :alt="product.name" class="sticky top-28 aspect-[3/4] w-full rounded-2xl bg-secondary-100 object-cover">
         </div>
 
-        <div class="flex min-w-0 flex-col gap-4">
+        <!-- Інфо, а під ним вибір і покупка — одна колонка праворуч від головного фото -->
+        <div class="flex min-w-0 flex-col gap-8" :class="{ 'lg:col-span-full': !mainPhoto }">
+          <div class="flex min-w-0 flex-col gap-4">
 
-          <div class="flex items-start justify-between gap-4">
-            <h1 class="store-title text-2xl md:text-4xl">{{ product.name }}</h1>
-            <button
-                type="button"
-                class="flex size-11 shrink-0 items-center justify-center rounded-full border border-secondary-200 text-secondary-900 transition-colors hover:border-primary-300 hover:bg-primary-50"
-                :class="{ 'border-primary-200 bg-primary-50 text-primary-700': isFavorite }"
-                aria-label="Обране"
-                @click="toggleFavorite"
-            >
-              <Icon :name="isFavorite ? 'mdi:heart' : 'mdi:heart-outline'" size="21" />
-            </button>
-          </div>
-
-          <a v-if="product.reviewCount" href="#reviews" class="flex w-fit items-center gap-2 text-sm text-secondary-600 transition hover:text-primary-700">
-            <BRating :value="product.averageRating ?? 0" readonly size="sm" />
-            <span>{{ Number((product.averageRating ?? 0).toFixed(1)) }} · {{ product.reviewCount }} відгуків</span>
-          </a>
-
-          <p class="flex items-baseline gap-3">
-            <span class="text-2xl font-semibold text-secondary-950">{{ price }} ₴</span>
-            <span v-if="hasOldPrice" class="text-base text-secondary-400 line-through">{{ product.oldPrice }} ₴</span>
-            <BTag v-if="discountPercent" size="sm">-{{ discountPercent }}%</BTag>
-          </p>
-
-          <div v-if="product.description" class="text-sm leading-relaxed text-secondary-700 md:text-base">
-            <p :class="{ 'line-clamp-4': !isDescriptionOpen }">{{ product.description }}</p>
-            <button v-if="product.description.length > 240" type="button" class="mt-1 text-sm font-medium text-primary-700 underline-offset-4 hover:underline" @click="isDescriptionOpen = !isDescriptionOpen">
-              {{ isDescriptionOpen ? 'Згорнути' : 'Детальніше' }}
-            </button>
-          </div>
-
-          <p class="text-xs font-medium text-secondary-500">
-            {{ [selectedColorName, article && `Артикул ${article}`, product.material, product.brand].filter(Boolean).join(' • ') }}
-          </p>
-        </div>
-
-        <div class="flex min-w-0 flex-col gap-5">
-          <div v-if="colors.length" class="flex flex-col gap-3">
-            <span class="text-sm font-medium text-secondary-500">
-              Колір <span v-if="selectedColorName" class="text-secondary-950">· {{ selectedColorName }}</span>
-            </span>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex items-start justify-between gap-4">
+              <h1 class="store-title text-2xl md:text-4xl">{{ product.name }}</h1>
               <button
-                  v-for="color in colors"
-                  :key="color.id"
                   type="button"
-                  :disabled="!isColorAvailable(color.id)"
-                  class="flex size-11 items-center justify-center rounded-full border transition-all"
-                  :class="selectedColorId === color.id ? 'border-secondary-950 ring-2 ring-primary-200' : 'border-secondary-200 hover:border-secondary-400'"
-                  :aria-label="color.name"
-                  :aria-pressed="selectedColorId === color.id"
-                  @click="selectColor(color.id)"
+                  class="flex size-11 shrink-0 items-center justify-center rounded-full border border-secondary-200 text-secondary-900 transition-colors hover:border-primary-300 hover:bg-primary-50"
+                  :class="{ 'border-primary-200 bg-primary-50 text-primary-700': isFavorite }"
+                  aria-label="Обране"
+                  @click="toggleFavorite"
               >
-                <span class="size-8 rounded-full border border-black/10" :style="{ backgroundColor: color.hexCode ?? '#fff' }" />
+                <Icon :name="isFavorite ? 'mdi:heart' : 'mdi:heart-outline'" size="21" />
               </button>
             </div>
-          </div>
 
-          <div v-if="sizes.length" class="flex flex-col gap-3">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-secondary-500">Оберіть розмір</span>
-              <button type="button" class="text-sm font-medium text-primary-700 underline-offset-4 hover:underline" @click="isSizeChartOpen = true">
-                Таблиця розмірів
-              </button>
-            </div>
-            <div class="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
-              <button
-                  v-for="size in sizes"
-                  :key="size.id"
-                  type="button"
-                  class="min-w-14 rounded-lg border px-4 py-3 text-sm font-medium transition"
-                  :class="selectedSizeId === size.id ? 'border-secondary-900 bg-secondary-900 text-white' : 'border-secondary-200 text-secondary-800 hover:border-secondary-500'"
-                  :disabled="!isSizeAvailable(size.id)"
-                  :aria-pressed="selectedSizeId === size.id"
-                  @click="selectSize(size.id)"
-              >
-                {{ size.name }}
-              </button>
-            </div>
-          </div>
+            <a v-if="product.reviewCount" href="#reviews" class="flex w-fit items-center gap-2 text-sm text-secondary-600 transition hover:text-primary-700">
+              <BRating :value="product.averageRating ?? 0" readonly size="sm" />
+              <span>{{ Number((product.averageRating ?? 0).toFixed(1)) }} · {{ product.reviewCount }} відгуків</span>
+            </a>
 
-          <span class="w-fit rounded-full px-3 py-1 text-sm font-semibold" :class="availabilityTone">{{ availabilityLabel }}</span>
-
-          <!-- Кнопки покупки в самому блоці: нижня панель з'являється лише після прокрутки фото -->
-          <div class="grid grid-cols-2 gap-2 [&_button:disabled]:pointer-events-none" @click="sizes.length && !selectedSizeId && askSize()">
-            <AddToCartBtn compact :variant-id="currentVariant?.id ?? null" :disabled="!isPurchasable" />
-            <BBtn variant="outline" :disabled="!isPurchasable" @click="openQuickBuy">Купити в 1 клік</BBtn>
-          </div>
-
-          <div v-if="product.outOfStock" class="rounded-lg border border-amber-300 bg-amber-50 p-4">
-            <p class="mb-2 font-semibold text-amber-900">Немає в наявності</p>
-            <p v-if="stockSubscribed" class="text-sm text-amber-800">
-              Ми повідомимо вас на пошту, щойно товар зʼявиться.
+            <p class="flex items-baseline gap-3">
+              <span class="text-2xl font-semibold text-secondary-950">{{ price }} ₴</span>
+              <span v-if="hasOldPrice" class="text-base text-secondary-400 line-through">{{ product.oldPrice }} ₴</span>
+              <BTag v-if="discountPercent" size="sm">-{{ discountPercent }}%</BTag>
             </p>
-            <template v-else>
-              <p class="mb-2 text-sm text-amber-800">Підпишіться — повідомимо про надходження.</p>
-              <div class="flex gap-2">
-                <BInput v-model="stockEmail" type="email" placeholder="Ваш email" class="flex-1" />
-                <BBtn :disabled="!stockEmail.trim()" :loading="stockLoading" @click="subscribeStock">Підписатися</BBtn>
-              </div>
-            </template>
+
+            <div v-if="product.description" class="text-sm leading-relaxed text-secondary-700 md:text-base">
+              <p :class="{ 'line-clamp-4': !isDescriptionOpen }">{{ product.description }}</p>
+              <button v-if="product.description.length > 240" type="button" class="mt-1 text-sm font-medium text-primary-700 underline-offset-4 hover:underline" @click="isDescriptionOpen = !isDescriptionOpen">
+                {{ isDescriptionOpen ? 'Згорнути' : 'Детальніше' }}
+              </button>
+            </div>
+
+            <p class="text-xs font-medium text-secondary-500">
+              {{ [selectedColorName, article && `Артикул ${article}`, product.material, product.brand].filter(Boolean).join(' • ') }}
+            </p>
           </div>
 
-          <BAccordion
-              :items="[
-                { key: 'care', title: 'Склад та догляд', icon: 'lucide:shirt' },
-                { key: 'sizes', title: 'Таблиця розмірів', icon: 'lucide:ruler' },
-                { key: 'delivery', title: 'Доставка та повернення', icon: 'lucide:truck' },
-                { key: 'reviews', title: `Відгуки (${product.reviewCount ?? 0})`, icon: 'lucide:message-square' },
-              ]"
-          >
-            <template #item="{ item }">
-              <ul v-if="item.key === 'care'" class="space-y-1 px-1 pb-4">
-                <li v-if="product.material">Матеріал: {{ product.material }}</li>
-                <li>Прання при температурі до 30°C</li>
-                <li>Не використовувати відбілювачі</li>
-              </ul>
-              <ul v-else-if="item.key === 'delivery'" class="space-y-1 px-1 pb-4">
-                <li>Нова Пошта — 1–3 дні</li>
-                <li>Укрпошта — 3–7 днів</li>
-                <li>Оплата карткою або при отриманні</li>
-              </ul>
-              <div v-else class="px-1 pb-4">
-                <button v-if="item.key === 'sizes'" type="button" class="font-medium text-primary-700 underline-offset-4 hover:underline" @click="isSizeChartOpen = true">
-                  Відкрити таблицю розмірів
+          <div class="flex min-w-0 flex-col gap-5">
+            <div v-if="colors.length" class="flex flex-col gap-3">
+              <span class="text-sm font-medium text-secondary-500">
+                Колір <span v-if="selectedColorName" class="text-secondary-950">· {{ selectedColorName }}</span>
+              </span>
+              <div class="flex flex-wrap gap-2">
+                <button
+                    v-for="color in colors"
+                    :key="color.id"
+                    type="button"
+                    :disabled="!isColorAvailable(color.id)"
+                    class="flex size-11 items-center justify-center rounded-full border transition-all"
+                    :class="selectedColorId === color.id ? 'border-secondary-950 ring-2 ring-primary-200' : 'border-secondary-200 hover:border-secondary-400'"
+                    :aria-label="color.name"
+                    :aria-pressed="selectedColorId === color.id"
+                    @click="selectColor(color.id)"
+                >
+                  <span class="size-8 rounded-full border border-black/10" :style="{ backgroundColor: color.hexCode ?? '#fff' }" />
                 </button>
-                <a v-else href="#reviews" class="font-medium text-primary-700 underline-offset-4 hover:underline">Перейти до відгуків</a>
               </div>
-            </template>
-          </BAccordion>
+            </div>
+
+            <div v-if="sizes.length" class="flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-secondary-500">Оберіть розмір</span>
+                <button type="button" class="text-sm font-medium text-primary-700 underline-offset-4 hover:underline" @click="isSizeChartOpen = true">
+                  Таблиця розмірів
+                </button>
+              </div>
+              <div class="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
+                <button
+                    v-for="size in sizes"
+                    :key="size.id"
+                    type="button"
+                    class="min-w-14 rounded-lg border px-4 py-3 text-sm font-medium transition"
+                    :class="selectedSizeId === size.id ? 'border-secondary-900 bg-secondary-900 text-white' : 'border-secondary-200 text-secondary-800 hover:border-secondary-500'"
+                    :disabled="!isSizeAvailable(size.id)"
+                    :aria-pressed="selectedSizeId === size.id"
+                    @click="selectSize(size.id)"
+                >
+                  {{ size.name }}
+                </button>
+              </div>
+            </div>
+
+            <span class="w-fit rounded-full px-3 py-1 text-sm font-semibold" :class="availabilityTone">{{ availabilityLabel }}</span>
+
+            <!-- Кнопки покупки в самому блоці: нижня панель з'являється лише після прокрутки фото -->
+            <div class="grid grid-cols-2 gap-2 [&_button:disabled]:pointer-events-none" @click="sizes.length && !selectedSizeId && askSize()">
+              <AddToCartBtn compact :variant-id="currentVariant?.id ?? null" :disabled="!isPurchasable" />
+              <BBtn variant="outline" :disabled="!isPurchasable" @click="openQuickBuy">Купити в 1 клік</BBtn>
+            </div>
+
+            <div v-if="product.outOfStock" class="rounded-lg border border-amber-300 bg-amber-50 p-4">
+              <p class="mb-2 font-semibold text-amber-900">Немає в наявності</p>
+              <p v-if="stockSubscribed" class="text-sm text-amber-800">
+                Ми повідомимо вас на пошту, щойно товар зʼявиться.
+              </p>
+              <template v-else>
+                <p class="mb-2 text-sm text-amber-800">Підпишіться — повідомимо про надходження.</p>
+                <div class="flex gap-2">
+                  <BInput v-model="stockEmail" type="email" placeholder="Ваш email" class="flex-1" />
+                  <BBtn :disabled="!stockEmail.trim()" :loading="stockLoading" @click="subscribeStock">Підписатися</BBtn>
+                </div>
+              </template>
+            </div>
+
+            <BAccordion
+                :items="[
+                  { key: 'care', title: 'Склад та догляд', icon: 'lucide:shirt' },
+                  { key: 'sizes', title: 'Таблиця розмірів', icon: 'lucide:ruler' },
+                  { key: 'delivery', title: 'Доставка та повернення', icon: 'lucide:truck' },
+                  { key: 'reviews', title: `Відгуки (${product.reviewCount ?? 0})`, icon: 'lucide:message-square' },
+                ]"
+            >
+              <template #item="{ item }">
+                <ul v-if="item.key === 'care'" class="space-y-1 px-1 pb-4">
+                  <li v-if="product.material">Матеріал: {{ product.material }}</li>
+                  <li>Прання при температурі до 30°C</li>
+                  <li>Не використовувати відбілювачі</li>
+                </ul>
+                <ul v-else-if="item.key === 'delivery'" class="space-y-1 px-1 pb-4">
+                  <li>Нова Пошта — 1–3 дні</li>
+                  <li>Укрпошта — 3–7 днів</li>
+                  <li>Оплата карткою або при отриманні</li>
+                </ul>
+                <div v-else class="px-1 pb-4">
+                  <button v-if="item.key === 'sizes'" type="button" class="font-medium text-primary-700 underline-offset-4 hover:underline" @click="isSizeChartOpen = true">
+                    Відкрити таблицю розмірів
+                  </button>
+                  <a v-else href="#reviews" class="font-medium text-primary-700 underline-offset-4 hover:underline">Перейти до відгуків</a>
+                </div>
+              </template>
+            </BAccordion>
+          </div>
         </div>
       </section>
 
