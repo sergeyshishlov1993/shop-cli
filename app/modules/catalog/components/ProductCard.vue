@@ -77,11 +77,6 @@ const hoverImageUrl = computed(() => getFileUrl(props.product.hoverImage, 'mediu
 
 const hoverVideoUrl = computed(() => getFileUrl(props.product.hoverVideo) || null)
 
-// sizes/defaultVariantId можуть ще не приходити з API — тоді швидке додавання через модалку
-type CardExtras = { sizes?: { variantId: number; name: string; available: boolean }[]; defaultVariantId?: number | null }
-const extras = computed(() => props.product as ProductListItem & CardExtras)
-const cardSizes = computed(() => extras.value.sizes ?? [])
-
 function showAdded(meta: (string | null | undefined)[], price: number) {
   toast.product({
     image: getFileUrl(props.product.mainImage, 'thumb') || null,
@@ -90,22 +85,6 @@ function showAdded(meta: (string | null | undefined)[], price: number) {
     meta: meta.filter(Boolean).join(' · ') || null,
     price,
   })
-}
-
-async function addVariant(variantId: number, sizeName?: string) {
-  try {
-    await cartStore.addToCart(variantId, 1)
-    showAdded([sizeName], props.product.effectivePrice)
-  }
-  catch {
-    toast.error('Не вдалося додати товар у кошик')
-  }
-}
-
-function addDefault() {
-  const id = extras.value.defaultVariantId
-  if (id) addVariant(id)
-  else openQuickAdd()
 }
 
 const displayImage = computed(() => {
@@ -217,7 +196,7 @@ onMounted(() => {
     </NuxtLink>
     <div class="flex min-w-0 flex-1 flex-col gap-1 py-0.5">
       <NuxtLink :to="`/product/${product.slug}`" class="line-clamp-2 text-xs leading-snug text-secondary-800 hover:text-primary-700">{{ product.name }}</NuxtLink>
-      <span class="text-xs font-semibold text-secondary-900">
+      <span class="text-sm font-bold" :class="hasDiscount ? 'text-danger' : 'text-secondary-950'">
         {{ product.effectivePrice }} ₴
         <span v-if="hasDiscount" class="ml-1 font-normal text-secondary-400 line-through">{{ product.oldPrice }} ₴</span>
       </span>
@@ -273,13 +252,16 @@ onMounted(() => {
         </span>
       </div>
 
-      <span
+      <!-- Рейтинг на своєму місці (знизу зліва); клік — одразу до відгуків товару -->
+      <button
+          type="button"
           class="absolute bottom-2 left-2 flex items-center gap-1 rounded-sm bg-primary-700 px-1.5 py-0.5 text-[11px] font-medium text-white"
           :title="`Відгуків: ${product.reviewCount ?? 0}`"
+          @click.prevent.stop="navigateTo(`/product/${product.slug}#reviews`)"
       >
         {{ Number((product.averageRating ?? 0).toFixed(1)) }}
         <Icon name="mdi:star" size="13" class="text-primary-200" />
-      </span>
+      </button>
 
       <button
           type="button"
@@ -293,34 +275,6 @@ onMounted(() => {
     </NuxtLink>
 
     <template v-if="!compact">
-      <!-- Десктоп: швидке додавання по наведенню (розмір → одразу в кошик) -->
-      <div class="glass glass--strong absolute inset-x-2 bottom-2 hidden flex-col gap-2 p-3 opacity-0 transition-opacity group-hover:opacity-100 lg:flex">
-        <template v-if="cardSizes.length">
-          <span class="text-center text-xs font-medium uppercase tracking-widest text-secondary-900">Додати до кошика</span>
-          <div class="flex flex-wrap justify-center gap-1.5">
-            <button
-                v-for="size in cardSizes"
-                :key="size.variantId"
-                type="button"
-                class="min-w-9 rounded-full border border-secondary-300 px-2.5 py-1 text-xs text-secondary-900 transition-colors hover:border-secondary-900 hover:bg-secondary-900 hover:text-white disabled:pointer-events-none disabled:opacity-35 disabled:line-through"
-                :disabled="!size.available || cartStore.isLoading"
-                @click="addVariant(size.variantId, size.name)"
-            >
-              {{ size.name }}
-            </button>
-          </div>
-        </template>
-        <button
-            v-else
-            type="button"
-            class="text-xs font-medium uppercase tracking-widest text-secondary-900 hover:text-secondary-600"
-            :disabled="cartStore.isLoading"
-            @click="addDefault"
-        >
-          Додати до кошика
-        </button>
-      </div>
-
       <!-- Мобільний (без hover): маленька кнопка швидкого додавання -->
       <button
           type="button"
@@ -333,17 +287,16 @@ onMounted(() => {
     </template>
     </div>
 
-    <div v-if="compact" class="mt-2 flex items-end gap-2">
-      <NuxtLink :to="`/product/${product.slug}`" class="flex min-w-0 flex-1 flex-col gap-0.5">
+    <div v-if="compact" class="mt-2 flex flex-col gap-2">
+      <NuxtLink :to="`/product/${product.slug}`" class="flex min-w-0 flex-col gap-0.5">
         <span class="truncate text-[13px] text-secondary-700">{{ product.name }}</span>
         <span class="flex items-baseline gap-2">
-          <span class="text-sm font-semibold text-secondary-900">{{ product.effectivePrice }} ₴</span>
+          <span class="text-base font-bold" :class="hasDiscount ? 'text-danger' : 'text-secondary-950'">{{ product.effectivePrice }} ₴</span>
           <span v-if="hasDiscount" class="text-xs text-secondary-400 line-through">{{ product.oldPrice }} ₴</span>
         </span>
       </NuxtLink>
-      <!-- Компактна картка (рейки, шторка кошика): швидке додавання, як у Gepur -->
-      <BBtn variant="icon" size="sm" class="shrink-0 !bg-secondary-900 !text-white hover:!bg-secondary-700" aria-label="Додати в кошик" title="Додати в кошик" @click="openQuickAdd">
-        <Icon name="lucide:shopping-bag" size="16" />
+      <BBtn variant="primary" size="sm" block @click="openQuickAdd">
+        <Icon name="mdi:cart-outline" size="16" /> Додати в кошик
       </BBtn>
     </div>
 
@@ -360,11 +313,12 @@ onMounted(() => {
         {{ product.name }}
       </NuxtLink>
 
-      <div class="flex items-center gap-2">
-        <span class="text-sm font-semibold text-secondary-900">
+      <!-- Ціна крупно й жирно; акційна — червона, стара закреслена -->
+      <div class="flex items-baseline gap-2">
+        <span class="text-lg font-bold" :class="hasDiscount ? 'text-danger' : 'text-secondary-950'">
           {{ product.effectivePrice }} ₴
         </span>
-        <span v-if="hasDiscount" class="text-xs text-secondary-400 line-through">
+        <span v-if="hasDiscount" class="text-sm text-secondary-400 line-through">
           {{ product.oldPrice }} ₴
         </span>
       </div>

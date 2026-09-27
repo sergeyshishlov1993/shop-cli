@@ -154,6 +154,8 @@ const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 onMounted(() => {
   onScroll()
   window.addEventListener('scroll', onScroll, { passive: true })
+  // Перехід з рейтингу на картці (…#reviews): блок відгуків ще не відмальований у момент навігації — докручуємо після рендеру
+  if (route.hash === '#reviews') setTimeout(() => document.getElementById('reviews')?.scrollIntoView(), 300)
 })
 onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 
