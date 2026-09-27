@@ -102,3 +102,40 @@ test('admin product media: create with queued media, then edit', async ({ page }
     expect(res.ok(), `cleanup: ${res.status()} ${await res.text()}`).toBeTruthy()
   }
 })
+
+test('admin «З чим носити»: set 2 products, storefront shows them in order', async ({ page }) => {
+  const res = await page.request.get('/api/storefront/products?limit=40')
+  const { items } = await res.json() as { items: { id: number, slug: string, name: string, availabilityStatus: string }[] }
+  const inStock = items.filter(p => p.availabilityStatus === 'IN_STOCK')
+  // Унікальні назви — щоб однозначно вибрати в автодоповненні.
+  const unique = inStock.filter(p => inStock.filter(q => q.name === p.name).length === 1)
+  const [target, first, second] = unique as [typeof unique[0], typeof unique[0], typeof unique[0]]
+  expect(second, 'need 3 in-stock products with unique names').toBeTruthy()
+
+  await page.addInitScript(() => localStorage.setItem('cookie-consent', 'necessary')) // banner would cover the save button
+  await page.goto(`/admin/products/${target.id}`)
+  const token = (await page.context().cookies()).find(c => c.name === 'shop_access_token')?.value
+  const section = page.getByTestId('wear-with-admin')
+  try {
+    for (const p of [first, second]) {
+      await section.locator('input').fill(p.name)
+      await section.locator('li', { hasText: p.name }).first().click()
+      await expect(section.getByTestId('wear-with-list').locator('li', { hasText: p.name })).toBeVisible()
+    }
+    await section.getByRole('button', { name: 'Зберегти' }).click()
+    await expect(page.getByText('Список збережено')).toBeVisible()
+
+    await page.goto(`/product/${target.slug}`)
+    const block = page.getByTestId('wear-with')
+    await expect(block.getByRole('heading', { name: 'З чим носити' })).toBeVisible()
+    const links = block.locator(`a[href="/product/${first.slug}"], a[href="/product/${second.slug}"]`)
+    await expect(links.first()).toHaveAttribute('href', `/product/${first.slug}`)
+    await expect(links.last()).toHaveAttribute('href', `/product/${second.slug}`)
+  } finally {
+    const put = await page.request.put(`/api/admin/products/${target.id}/wear-with`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { productIds: [] },
+    })
+    expect(put.ok(), `cleanup: ${put.status()}`).toBeTruthy()
+  }
+})

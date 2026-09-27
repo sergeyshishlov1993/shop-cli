@@ -24,6 +24,14 @@ export interface AdminCategory {
   focalYMobile?: number
 }
 
+export interface AdminWearWithItem {
+  id: number
+  name: string
+  slug: string
+  price: number
+  mainImage: { id: number, s3Key: string, s3KeyThumb: string | null } | null
+}
+
 export interface AdminProduct {
   id: number
   hoverVideoFileId?: number | null
@@ -431,6 +439,12 @@ export const adminApi = {
   },
   deleteProduct(id: number) {
     return useNuxtApp().$api(`/admin/products/${id}`, { method: 'DELETE' })
+  },
+  wearWith(id: number) {
+    return useNuxtApp().$api<AdminWearWithItem[]>(`/admin/products/${id}/wear-with`)
+  },
+  setWearWith(id: number, productIds: number[]) {
+    return useNuxtApp().$api<AdminWearWithItem[]>(`/admin/products/${id}/wear-with`, { method: 'PUT', body: { productIds } })
   },
   uploadFile(file: File, onProgress?: (percent: number) => void) {
     const body = new FormData()

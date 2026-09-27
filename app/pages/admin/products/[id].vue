@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { adminApi, getAdminError, type AdminColor, type AdminProduct, type AdminSize, type AdminVariant } from '~/modules/admin/adminApi'
+import { adminApi, getAdminError, type AdminColor, type AdminProduct, type AdminSize, type AdminVariant, type AdminWearWithItem } from '~/modules/admin/adminApi'
 import AdminDialog from '~/modules/admin/components/AdminDialog.vue'
 import AdminProductMedia from '~/modules/admin/components/AdminProductMedia.vue'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
+import { getFileUrl } from '~/modules/common/helpers/fileUrl'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
@@ -18,10 +19,16 @@ const variantDialog = ref(false)
 const editingVariantId = ref<number | null>(null)
 const variantForm = reactive({ sku: '', barcode: '', sizeId: 0, colorId: 0, price: null as number | null, stockQty: 0, reservedQty: 0, isActive: true })
 
+const wearWith = ref<AdminWearWithItem[]>([])
+const wearSearchOptions = ref<AdminProduct[]>([])
+const wearSearchValue = ref<number | null>(null)
+const wearSearchLoading = ref(false)
+const wearSaving = ref(false)
+
 async function load() {
   try {
-    ;[product.value, variants.value, sizes.value, colors.value] = await Promise.all([
-      adminApi.product(productId), adminApi.variants(productId), adminApi.sizes(), adminApi.colors(),
+    ;[product.value, variants.value, sizes.value, colors.value, wearWith.value] = await Promise.all([
+      adminApi.product(productId), adminApi.variants(productId), adminApi.sizes(), adminApi.colors(), adminApi.wearWith(productId),
     ])
   } catch (error) { toast.error(getAdminError(error, 'Не вдалося завантажити товар')) }
 }
@@ -49,6 +56,38 @@ async function saveVariant() {
 async function removeVariant(id: number) {
   if (!(await confirm({ title: 'Видалити варіант?', message: 'Цю дію не можна скасувати.', variant: 'danger', confirmText: 'Видалити' }))) return
   try { await adminApi.deleteVariant(productId, id); variants.value = await adminApi.variants(productId) } catch (error) { toast.error(getAdminError(error)) }
+}
+
+const wearOptions = computed(() => wearSearchOptions.value
+  .filter(p => p.id !== productId && !wearWith.value.some(w => w.id === p.id))
+  .map(p => ({ value: p.id, label: p.name })))
+
+async function searchWear(search: string) {
+  wearSearchLoading.value = true
+  try { wearSearchOptions.value = (await adminApi.products({ search, limit: 10 })).items } catch (error) { toast.error(getAdminError(error)) } finally { wearSearchLoading.value = false }
+}
+
+watch(wearSearchValue, (id) => {
+  const found = id ? wearSearchOptions.value.find(p => p.id === id) : null
+  if (!found) return
+  if (wearWith.value.length >= 12) { toast.error('Максимум 12 товарів'); return }
+  wearWith.value.push({ id: found.id, name: found.name, slug: found.slug, price: found.basePrice, mainImage: null })
+  nextTick(() => { wearSearchValue.value = null })
+})
+
+function moveWear(index: number, delta: number) {
+  const list = wearWith.value
+  const target = index + delta
+  if (target < 0 || target >= list.length) return
+  ;[list[index], list[target]] = [list[target]!, list[index]!]
+}
+
+async function saveWear() {
+  wearSaving.value = true
+  try {
+    wearWith.value = await adminApi.setWearWith(productId, wearWith.value.map(w => w.id))
+    toast.success('Список збережено')
+  } catch (error) { toast.error(getAdminError(error)) } finally { wearSaving.value = false }
 }
 
 await load()
@@ -90,6 +129,23 @@ await load()
     <section class="space-y-4">
       <div><h2 class="text-xl font-semibold">Медіагалерея</h2><p class="text-sm text-secondary-500">Перше основне медіа показується у картці товару. Порядок можна змінювати.</p></div>
       <AdminProductMedia :product-id="productId" />
+    </section>
+
+    <section class="space-y-4" data-testid="wear-with-admin">
+      <div><h2 class="text-xl font-semibold">З чим носити</h2><p class="text-sm text-secondary-500">Ручний список (до 12). Якщо порожній — на вітрині показуються товари з інших категорій, які купують разом.</p></div>
+      <BAutocomplete v-model="wearSearchValue" :options="wearOptions" :loading="wearSearchLoading" label="Додати товар" placeholder="Почніть вводити назву" :min-chars="2" @search="searchWear" />
+      <ul class="divide-y divide-secondary-100 rounded-xl border border-secondary-200 bg-white" data-testid="wear-with-list">
+        <li v-for="(item, index) in wearWith" :key="item.id" class="flex items-center gap-3 p-3">
+          <img v-if="item.mainImage" :src="getFileUrl(item.mainImage, 'thumb')" :alt="item.name" class="size-12 rounded object-cover">
+          <div v-else class="size-12 rounded bg-secondary-100" />
+          <span class="flex-1 text-sm">{{ item.name }}</span>
+          <BBtn variant="icon" size="sm" title="Вгору" :disabled="index === 0" @click="moveWear(index, -1)"><Icon name="lucide:arrow-up" /></BBtn>
+          <BBtn variant="icon" size="sm" title="Вниз" :disabled="index === wearWith.length - 1" @click="moveWear(index, 1)"><Icon name="lucide:arrow-down" /></BBtn>
+          <BBtn variant="icon" size="sm" class="text-red-600" title="Прибрати" @click="wearWith.splice(index, 1)"><Icon name="lucide:x" /></BBtn>
+        </li>
+        <li v-if="!wearWith.length" class="p-6 text-center text-sm text-secondary-500">Список порожній.</li>
+      </ul>
+      <div class="flex justify-end"><BBtn :loading="wearSaving" @click="saveWear">Зберегти</BBtn></div>
     </section>
 
     <AdminDialog v-model="variantDialog" :title="editingVariantId ? 'Редагувати варіант' : 'Новий варіант'">

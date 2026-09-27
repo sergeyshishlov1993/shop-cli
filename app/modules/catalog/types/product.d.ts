@@ -139,6 +139,7 @@ interface ProductListResponse {
 }
 
 interface RelatedProducts {
+  wearWith: ProductListItem[]
   boughtTogether: ProductListItem[]
   similar: ProductListItem[]
 }

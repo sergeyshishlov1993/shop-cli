@@ -78,7 +78,7 @@ const breadcrumbs = computed(() => {
 
 const article = computed(() => currentVariant.value?.sku ?? null)
 const similarProducts = computed(() => relatedProducts.value?.similar ?? [])
-const boughtTogetherProducts = computed(() => relatedProducts.value?.boughtTogether ?? [])
+const wearWithProducts = computed(() => relatedProducts.value?.wearWith ?? [])
 
 const selectedColorName = computed(() => colors.value.find(c => c.id === selectedColorId.value)?.name ?? null)
 
@@ -515,10 +515,10 @@ watch(isSizeChartOpen, async (isOpen) => {
         <ReviewsList :product-id="product.id" />
       </section>
 
-      <section v-if="similarProducts.length" class="store-container flex flex-col gap-6 pb-16">
+      <section v-if="wearWithProducts.length" class="store-container flex flex-col gap-6 pb-16" data-testid="wear-with">
         <h2 class="store-title border-t border-secondary-200 pt-8 text-xl md:text-2xl">З чим носити</h2>
         <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          <ProductCard v-for="item in similarProducts.slice(0, 4)" :key="item.id" :product="item" />
+          <ProductCard v-for="item in wearWithProducts.slice(0, 4)" :key="item.id" :product="item" />
         </div>
       </section>
 
@@ -533,10 +533,10 @@ watch(isSizeChartOpen, async (isOpen) => {
         </div>
       </section>
 
-      <section v-if="boughtTogetherProducts.length" class="store-container flex flex-col gap-6 pb-16">
+      <section v-if="similarProducts.length" class="store-container flex flex-col gap-6 pb-16">
         <h2 class="store-title border-t border-secondary-200 pt-8 text-xl md:text-2xl">Тебе може зацікавити</h2>
         <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          <ProductCard v-for="item in boughtTogetherProducts.slice(0, 4)" :key="item.id" :product="item" />
+          <ProductCard v-for="item in similarProducts.slice(0, 4)" :key="item.id" :product="item" />
         </div>
       </section>
 
