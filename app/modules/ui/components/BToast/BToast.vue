@@ -68,7 +68,7 @@ onBeforeUnmount(() => {
           <img v-if="toast.product.image" :src="toast.product.image" :alt="toast.product.name" class="h-16 w-12 shrink-0 rounded-lg bg-secondary-100 object-cover">
           <div class="flex min-w-0 flex-1 flex-col gap-0.5">
             <p class="flex items-center gap-1.5 text-sm font-semibold">
-              <Icon name="lucide:circle-check" class="size-4 shrink-0 text-emerald-600" />
+              <Icon :name="toast.product.icon ?? 'lucide:circle-check'" class="size-4 shrink-0" :class="toast.product.icon ? 'text-primary-600' : 'text-emerald-600'" />
               {{ toast.product.title }}
             </p>
             <p class="truncate text-xs text-secondary-700">{{ toast.product.name }}</p>
@@ -77,7 +77,10 @@ onBeforeUnmount(() => {
               <span v-if="toast.product.meta && toast.product.price != null"> · </span>
               <span v-if="toast.product.price != null" class="font-semibold text-secondary-900">{{ toast.product.price }} ₴</span>
             </p>
-            <button type="button" class="mt-1 w-fit text-xs font-medium underline underline-offset-4 hover:text-secondary-600" @click="openCart(toast.id)">
+            <NuxtLink v-if="toast.product.link" :to="toast.product.link.to" class="mt-1 w-fit text-xs font-medium underline underline-offset-4 hover:text-secondary-600" @click="remove(toast.id)">
+              {{ toast.product.link.label }}
+            </NuxtLink>
+            <button v-else type="button" class="mt-1 w-fit text-xs font-medium underline underline-offset-4 hover:text-secondary-600" @click="openCart(toast.id)">
               До кошика
             </button>
           </div>

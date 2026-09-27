@@ -175,7 +175,9 @@ async function toggleWishlist() {
 
   try {
     await favoritesStore.toggle(props.product.id)
-    toast.success(isFavorite.value ? 'Додано в обране' : 'Прибрано з обраного')
+    const payload = { image: getFileUrl(props.product.mainImage, 'thumb') || null, name: props.product.name, price: props.product.effectivePrice }
+    if (isFavorite.value) toast.product({ ...payload, title: 'Додано в обране', icon: 'mdi:heart', link: { label: 'До обраного', to: '/favorites' } })
+    else toast.product({ ...payload, title: 'Прибрано з обраного', icon: 'mdi:heart-outline', link: { label: 'До обраного', to: '/favorites' } })
   }
   catch {
     toast.error('Не вдалося оновити обране')

@@ -168,7 +168,15 @@ async function toggleFavorite() {
 
   try {
     await favoritesStore.toggle(product.value.id)
-    toast.success(favoritesStore.isFavorite(product.value.id) ? 'Додано в обране' : 'Прибрано з обраного')
+    const added = favoritesStore.isFavorite(product.value.id)
+    toast.product({
+      image: getFileUrl(product.value.media?.[0]?.file ?? null, 'thumb') || null,
+      title: added ? 'Додано в обране' : 'Прибрано з обраного',
+      name: product.value.name,
+      price: price.value,
+      icon: added ? 'mdi:heart' : 'mdi:heart-outline',
+      link: { label: 'До обраного', to: '/favorites' },
+    })
   }
   catch {
     toast.error('Не вдалося оновити обране')

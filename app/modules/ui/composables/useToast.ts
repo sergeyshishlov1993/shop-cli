@@ -4,6 +4,9 @@ export interface ProductToast {
   name: string
   meta?: string | null
   price?: number | string | null
+  // Посилання замість «До кошика» (напр. «До обраного» → /favorites) та іконка біля заголовка
+  link?: { label: string, to: string }
+  icon?: string
 }
 
 interface Toast {
