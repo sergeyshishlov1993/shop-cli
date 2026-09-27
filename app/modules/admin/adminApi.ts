@@ -68,6 +68,7 @@ export interface AdminProductMedia {
   id: number
   mediaType: 'IMAGE' | 'VIDEO'
   isMain: boolean
+  isHover?: boolean
   sortOrder: number
   focalX?: number
   focalY?: number
@@ -482,7 +483,7 @@ export const adminApi = {
   addProductInstagramMedia(productId: number, dto: { url: string, sortOrder?: number }) {
     return useNuxtApp().$api<AdminProductMedia>(`/admin/products/${productId}/media/instagram`, { method: 'POST', body: dto })
   },
-  updateProductMedia(productId: number, mediaId: number, dto: { variantId?: number | null, sortOrder?: number, isMain?: boolean }) {
+  updateProductMedia(productId: number, mediaId: number, dto: { variantId?: number | null, sortOrder?: number, isMain?: boolean, isHover?: boolean }) {
     return useNuxtApp().$api<AdminProductMedia>(`/admin/products/${productId}/media/${mediaId}`, { method: 'PATCH', body: dto })
   },
   setMainProductMedia(productId: number, mediaId: number) {

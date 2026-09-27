@@ -91,6 +91,10 @@ interface ProductListItem {
   availabilityStatus: Exclude<AvailabilityStatus, 'OUT_OF_STOCK'>
   mainImage: ProductCardImage | null
   hoverImage: ProductCardImage | null
+  /** Розміри для швидкого додавання з картки; [] якщо товар без розмірів (немає в обраному/промо-блоках) */
+  sizes?: { variantId: number, name: string, available: boolean }[]
+  /** Для товарів без розмірів — перший доступний варіант */
+  defaultVariantId?: number | null
   hoverVideo?: ProductMediaFile | null
   averageRating: number | null
   reviewCount: number

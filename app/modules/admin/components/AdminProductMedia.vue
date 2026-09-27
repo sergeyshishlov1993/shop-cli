@@ -74,6 +74,7 @@ async function run(action: () => Promise<unknown>) {
 }
 
 const setMain = (id: number) => run(() => adminApi.setMainProductMedia(props.productId!, id))
+const toggleHover = (item: { id: number, isHover?: boolean }) => run(() => adminApi.updateProductMedia(props.productId!, item.id, { isHover: !item.isHover }))
 const toggleCardVideo = (fileId: number) => run(() => adminApi.updateProduct(props.productId!, { hoverVideoFileId: cardVideoFileId.value === fileId ? null : fileId }))
 
 async function remove(id: number) {
@@ -102,6 +103,7 @@ defineExpose({ uploadPending, hasPending: () => files.value.length > 0 || pendin
           <img v-else :src="getFileUrl(item.file, 'medium')" :alt="item.file?.originalName" class="size-full object-cover">
           <div class="absolute left-2 top-2 flex flex-col items-start gap-1">
             <BTag v-if="item.isMain" size="sm">★ Головне</BTag>
+            <BTag v-if="item.isHover" size="sm" variant="info">◐ При наведенні</BTag>
             <BTag v-if="item.file?.id && item.file?.id === cardVideoFileId" size="sm" variant="info">▶ На картці</BTag>
             <BTag v-if="item.externalUrl" size="sm" variant="secondary">Відеоогляд Instagram</BTag>
           </div>
@@ -117,6 +119,16 @@ defineExpose({ uploadPending, hasPending: () => files.value.length > 0 || pendin
             @click="setMain(item.id)"
           >
             <Icon name="lucide:star" size="14" /> {{ item.isMain ? 'Головне фото' : 'Зробити головним' }}
+          </BBtn>
+          <BBtn
+            v-if="item.mediaType === 'IMAGE'"
+            size="sm"
+            block
+            :variant="item.isHover ? 'primary' : 'outline'"
+            :disabled="busy"
+            @click="toggleHover(item)"
+          >
+            <Icon name="lucide:mouse-pointer-2" size="14" /> Фото при наведенні{{ item.isHover ? ' ✓' : '' }}
           </BBtn>
           <BBtn
             v-else-if="item.file"
