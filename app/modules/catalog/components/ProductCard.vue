@@ -7,10 +7,13 @@ import { useFavoritesStore } from '~/modules/favorites/favoritesStore'
 interface Props {
   product: ProductListItem
   compact?: boolean
+  // Горизонтальна міні-картка (шторка кошика, як у Gepur): фото зліва, назва/ціна і кнопка кошика праворуч
+  mini?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   compact: false,
+  mini: false,
 })
 
 const cartStore = useCartStore()
@@ -181,7 +184,22 @@ onMounted(() => {
 </script>
 
 <template>
-  <div :class="['product-card group relative flex h-full flex-col', { 'product-card--compact': compact }]">
+  <div v-if="mini" class="flex h-full gap-3">
+    <NuxtLink :to="`/product/${product.slug}`" class="aspect-[3/4] w-20 shrink-0 overflow-hidden rounded-md bg-secondary-100">
+      <img v-if="mainImageUrl" :src="mainImageUrl" :alt="product.name" class="size-full object-cover">
+    </NuxtLink>
+    <div class="flex min-w-0 flex-1 flex-col gap-1 py-0.5">
+      <NuxtLink :to="`/product/${product.slug}`" class="line-clamp-2 text-xs leading-snug text-secondary-800 hover:text-primary-700">{{ product.name }}</NuxtLink>
+      <span class="text-xs font-semibold text-secondary-900">
+        {{ product.effectivePrice }} ₴
+        <span v-if="hasDiscount" class="ml-1 font-normal text-secondary-400 line-through">{{ product.oldPrice }} ₴</span>
+      </span>
+      <button type="button" class="mt-auto flex size-8 items-center justify-center rounded-full bg-primary-600 text-white transition-colors hover:bg-primary-700" aria-label="Додати в кошик" title="Додати в кошик" @click="openQuickAdd">
+        <Icon name="lucide:shopping-bag" size="15" />
+      </button>
+    </div>
+  </div>
+  <div v-else :class="['product-card group relative flex h-full flex-col', { 'product-card--compact': compact }]">
     <NuxtLink
         :to="`/product/${product.slug}`"
         class="product-card__image relative aspect-[3/4] overflow-hidden rounded-sm bg-secondary-100"
@@ -296,144 +314,145 @@ onMounted(() => {
       </BBtn>
     </div>
 
-    <BModal
-        v-model="isModalOpen"
-        title="Оберіть варіант"
-        size="md"
-        on-top
-        @update:model-value="!$event && closeModal()"
-    >
-      <div v-if="loadingVariants" class="flex items-center justify-center py-8">
-        <BSpinner size="lg" />
-      </div>
-
-      <div v-else class="flex flex-col gap-5">
-        <div class="flex gap-4">
-          <div class="h-32 w-24 shrink-0 overflow-hidden rounded-lg bg-secondary-100">
-            <img
-                v-if="mainImageUrl"
-                :src="mainImageUrl"
-                :alt="product.name"
-                class="h-full w-full object-cover"
-            />
-          </div>
-          <div class="flex flex-col gap-1">
-            <span v-if="product.brand" class="text-xs text-secondary-500">
-              {{ product.brand }}
-            </span>
-            <span class="text-sm font-medium text-secondary-800">
-              {{ product.name }}
-            </span>
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-secondary-900">
-                {{ selectedVariant?.price ?? product.effectivePrice }} ₴
-              </span>
-              <span v-if="hasDiscount" class="text-xs text-secondary-400 line-through">
-                {{ product.oldPrice }} ₴
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="colors.length > 0" class="flex flex-col gap-2">
-          <span class="text-sm font-medium text-secondary-700">Колір</span>
-          <div class="flex flex-wrap gap-2">
-            <button
-                v-for="color in colors"
-                :key="color!.id"
-                class="h-8 w-8 rounded-full border-2 transition-colors"
-                :class="selectedColor === color!.id ? 'border-primary-500' : 'border-secondary-200'"
-                :style="{ backgroundColor: color!.hexCode ?? '#ccc' }"
-                :title="color!.name"
-                @click="selectColor(color!.id)"
-            />
-          </div>
-        </div>
-
-        <div v-if="uniqueSizes.length > 0" class="flex flex-col gap-2">
-          <span class="text-sm font-medium text-secondary-700">Розмір</span>
-          <div class="flex flex-wrap gap-2">
-            <button
-                v-for="variant in uniqueSizes"
-                :key="variant.size?.name ?? variant.sku"
-                class="rounded-lg border px-3 py-1.5 text-sm transition-colors"
-                :class="
-                selectedSizeName === (variant.size?.name ?? variant.sku)
-                  ? 'border-primary-500 bg-primary-50 text-primary-700'
-                  : 'border-secondary-200 text-secondary-700 hover:border-secondary-400'
-              "
-                @click="selectSize(variant.size?.name ?? variant.sku)"
-            >
-              {{ variant.size?.name ?? variant.sku }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="selectedVariant?.availabilityStatus === 'LOW_STOCK'" class="flex items-center gap-1 text-xs text-warning">
-          <Icon name="mdi:alert-circle-outline" size="14" />
-          <span>Закінчується — залишилось {{ selectedVariant.availableQty }} шт.</span>
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <span class="text-sm font-medium text-secondary-700">Кількість</span>
-          <div class="flex items-center gap-3">
-            <button
-                class="flex h-8 w-8 items-center justify-center rounded-lg border border-secondary-200 text-secondary-700 transition-colors hover:border-secondary-400 disabled:opacity-35"
-                :disabled="quantity <= 1"
-                @click="decrementQuantity"
-            >
-              −
-            </button>
-            <span class="min-w-[20px] text-center text-sm font-medium">{{ quantity }}</span>
-            <button
-                class="flex h-8 w-8 items-center justify-center rounded-lg border border-secondary-200 text-secondary-700 transition-colors hover:border-secondary-400 disabled:opacity-35"
-                :disabled="!selectedVariant || quantity >= maxQuantity"
-                @click="incrementQuantity"
-            >
-              +
-            </button>
-          </div>
-          <span
-              v-if="selectedVariant"
-              class="text-xs text-secondary-400"
-          >
-            Доступно: {{ selectedVariant.availableQty }} шт.
-          </span>
-        </div>
-      </div>
-
-      <template #footer>
-        <div v-if="!isAdded" class="w-full">
-          <BBtn
-              variant="primary"
-              block
-              :disabled="!selectedVariant"
-              :loading="cartStore.isLoading"
-              @click="addToCart"
-          >
-            <Icon name="mdi:cart-outline" size="18" />
-            Додати в кошик
-          </BBtn>
-        </div>
-        <div v-else class="flex w-full gap-3">
-          <BBtn
-              variant="outline"
-              block
-              @click="closeModal"
-          >
-            Продовжити покупки
-          </BBtn>
-          <BBtn
-              variant="primary"
-              block
-              @click="goToCart"
-          >
-            Перейти в кошик
-          </BBtn>
-        </div>
-      </template>
-    </BModal>
   </div>
+
+  <BModal
+      v-model="isModalOpen"
+      title="Оберіть варіант"
+      size="md"
+      on-top
+      @update:model-value="!$event && closeModal()"
+  >
+    <div v-if="loadingVariants" class="flex items-center justify-center py-8">
+      <BSpinner size="lg" />
+    </div>
+
+    <div v-else class="flex flex-col gap-5">
+      <div class="flex gap-4">
+        <div class="h-32 w-24 shrink-0 overflow-hidden rounded-lg bg-secondary-100">
+          <img
+              v-if="mainImageUrl"
+              :src="mainImageUrl"
+              :alt="product.name"
+              class="h-full w-full object-cover"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <span v-if="product.brand" class="text-xs text-secondary-500">
+            {{ product.brand }}
+          </span>
+          <span class="text-sm font-medium text-secondary-800">
+            {{ product.name }}
+          </span>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-secondary-900">
+              {{ selectedVariant?.price ?? product.effectivePrice }} ₴
+            </span>
+            <span v-if="hasDiscount" class="text-xs text-secondary-400 line-through">
+              {{ product.oldPrice }} ₴
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="colors.length > 0" class="flex flex-col gap-2">
+        <span class="text-sm font-medium text-secondary-700">Колір</span>
+        <div class="flex flex-wrap gap-2">
+          <button
+              v-for="color in colors"
+              :key="color!.id"
+              class="h-8 w-8 rounded-full border-2 transition-colors"
+              :class="selectedColor === color!.id ? 'border-primary-500' : 'border-secondary-200'"
+              :style="{ backgroundColor: color!.hexCode ?? '#ccc' }"
+              :title="color!.name"
+              @click="selectColor(color!.id)"
+          />
+        </div>
+      </div>
+
+      <div v-if="uniqueSizes.length > 0" class="flex flex-col gap-2">
+        <span class="text-sm font-medium text-secondary-700">Розмір</span>
+        <div class="flex flex-wrap gap-2">
+          <button
+              v-for="variant in uniqueSizes"
+              :key="variant.size?.name ?? variant.sku"
+              class="rounded-lg border px-3 py-1.5 text-sm transition-colors"
+              :class="
+              selectedSizeName === (variant.size?.name ?? variant.sku)
+                ? 'border-primary-500 bg-primary-50 text-primary-700'
+                : 'border-secondary-200 text-secondary-700 hover:border-secondary-400'
+            "
+              @click="selectSize(variant.size?.name ?? variant.sku)"
+          >
+            {{ variant.size?.name ?? variant.sku }}
+          </button>
+        </div>
+      </div>
+
+      <div v-if="selectedVariant?.availabilityStatus === 'LOW_STOCK'" class="flex items-center gap-1 text-xs text-warning">
+        <Icon name="mdi:alert-circle-outline" size="14" />
+        <span>Закінчується — залишилось {{ selectedVariant.availableQty }} шт.</span>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <span class="text-sm font-medium text-secondary-700">Кількість</span>
+        <div class="flex items-center gap-3">
+          <button
+              class="flex h-8 w-8 items-center justify-center rounded-lg border border-secondary-200 text-secondary-700 transition-colors hover:border-secondary-400 disabled:opacity-35"
+              :disabled="quantity <= 1"
+              @click="decrementQuantity"
+          >
+            −
+          </button>
+          <span class="min-w-[20px] text-center text-sm font-medium">{{ quantity }}</span>
+          <button
+              class="flex h-8 w-8 items-center justify-center rounded-lg border border-secondary-200 text-secondary-700 transition-colors hover:border-secondary-400 disabled:opacity-35"
+              :disabled="!selectedVariant || quantity >= maxQuantity"
+              @click="incrementQuantity"
+          >
+            +
+          </button>
+        </div>
+        <span
+            v-if="selectedVariant"
+            class="text-xs text-secondary-400"
+        >
+          Доступно: {{ selectedVariant.availableQty }} шт.
+        </span>
+      </div>
+    </div>
+
+    <template #footer>
+      <div v-if="!isAdded" class="w-full">
+        <BBtn
+            variant="primary"
+            block
+            :disabled="!selectedVariant"
+            :loading="cartStore.isLoading"
+            @click="addToCart"
+        >
+          <Icon name="mdi:cart-outline" size="18" />
+          Додати в кошик
+        </BBtn>
+      </div>
+      <div v-else class="flex w-full gap-3">
+        <BBtn
+            variant="outline"
+            block
+            @click="closeModal"
+        >
+          Продовжити покупки
+        </BBtn>
+        <BBtn
+            variant="primary"
+            block
+            @click="goToCart"
+        >
+          Перейти в кошик
+        </BBtn>
+      </div>
+    </template>
+  </BModal>
 </template>
 
 <style scoped>

@@ -64,29 +64,20 @@ watch(() => route.fullPath, close)
     </div>
 
     <template v-if="!cartStore.isEmpty" #footer>
-      <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-2">
         <div class="flex items-center justify-between">
-          <span class="text-sm text-secondary-600">Разом ({{ cartStore.itemsCount }} од.)</span>
-          <span class="text-base font-bold text-secondary-950">{{ formatPrice(cartStore.subtotal) }}</span>
+          <span class="text-sm font-medium text-secondary-900">Разом {{ cartStore.itemsCount }} од.</span>
+          <span class="text-sm font-semibold text-secondary-950">{{ formatPrice(cartStore.subtotal) }}</span>
         </div>
-
-        <BBtn
-            variant="primary"
-            size="lg"
-            block
-            to="/checkout"
-            @click="close"
-        >
-          Оформити замовлення
-        </BBtn>
+        <BBtn variant="primary" block to="/checkout" @click="close">Оформити замовлення</BBtn>
         <BBtn variant="outline" block to="/cart" @click="close">Переглянути кошик</BBtn>
 
-        <!-- Рекомендації закріплені внизу шторки — видно завжди, без прокрутки списку товарів -->
-        <section v-if="visibleRecommended.length" class="-mx-5 mt-1 border-t border-secondary-200 px-5 pt-3">
-          <h3 class="mb-3 text-sm font-medium uppercase tracking-[0.12em] text-secondary-900">Вам може сподобатися</h3>
-          <div v-drag-scroll class="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none]">
-            <div v-for="item in visibleRecommended" :key="item.id" class="w-32 shrink-0">
-              <ProductCard :product="item" compact />
+        <!-- Рекомендації як у Gepur: горизонтальні міні-картки на сірому тлі, закріплені внизу -->
+        <section v-if="visibleRecommended.length" class="-mx-5 -mb-5 mt-2 bg-secondary-50 px-5 py-3">
+          <h3 class="mb-2 text-xs font-medium uppercase tracking-[0.12em] text-secondary-600">Вам може сподобатися</h3>
+          <div v-drag-scroll class="-mx-5 flex gap-4 overflow-x-auto px-5 [scrollbar-width:none]">
+            <div v-for="item in visibleRecommended" :key="item.id" class="w-[calc(50%-0.5rem)] shrink-0">
+              <ProductCard :product="item" mini />
             </div>
           </div>
         </section>
