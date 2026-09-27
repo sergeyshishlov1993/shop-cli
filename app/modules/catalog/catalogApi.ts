@@ -13,6 +13,8 @@ export interface CatalogQuery {
   isNew?: boolean
   isHit?: boolean
   isSeasonal?: boolean
+  // Ручна добірка промо-блоку (тип «Своє»)
+  promo?: number
   search?: string
   sort?: SortOption
   page?: number

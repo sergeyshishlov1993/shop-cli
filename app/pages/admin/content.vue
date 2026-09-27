@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { adminApi, getAdminError, type AdminHeroSlide, type AdminPageContent, type AdminPromoBlock } from '~/modules/admin/adminApi'
 import AdminDialog from '~/modules/admin/components/AdminDialog.vue'
+import { catalogApi } from '~/modules/catalog/catalogApi'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
 definePageMeta({layout:'admin',middleware:'admin'})
 const { confirm: confirmDialog }=useConfirm();
@@ -14,7 +15,7 @@ const heroMediaUrl=computed(()=>{if(heroFilePreview.value)return heroFilePreview
 const promoDialog=ref(false);const promoId=ref<number|null>(null);const promoForm=reactive({type:'CUSTOM' as AdminPromoBlock['type'],title:'',isActive:true,sortOrder:0,imageFileId:null as number|null,focalX:0.5,focalY:0.5,focalXTablet:0.5,focalYTablet:0.5,focalXMobile:0.5,focalYMobile:0.5});
 // Пропорції промо-банера на вітрині: 1440×512, 768×512, 375×464
 const promoRatios={desktop:1440/512,tablet:768/512,mobile:375/464}
-const promoImageUrl=computed(()=>{const p=promos.value.find(x=>x.id===promoId.value);return p?.imageFile?getFileUrl(p.imageFile,'medium'):''});const promoProductId=ref(0)
+const promoImageUrl=computed(()=>{const p=promos.value.find(x=>x.id===promoId.value);return p?.imageFile?getFileUrl(p.imageFile,'medium'):''})
 const pageDialog=ref(false);const pageSlug=ref<'about'|'delivery'>('about');const pageExists=ref(false);const pageForm=reactive({title:'',contentText:'',metaTitle:'',metaDescription:'',isActive:true})
 async function load(){try{[heroes.value,promos.value,pages.value]=await Promise.all([adminApi.heroSlides(),adminApi.promoBlocks(),adminApi.pages()])}catch(e){toast.error(getAdminError(e))}}
 function editHero(item?:AdminHeroSlide){heroId.value=item?.id??null;heroFile.value=null;Object.assign(heroForm,item?{title:item.title,subtitle:item.subtitle||'',buttonText:item.buttonText||'',buttonLink:item.buttonLink||'',mediaFileId:item.mediaFileId,mediaType:item.mediaType,isActive:item.isActive,sortOrder:item.sortOrder,focalX:item.focalX??0.5,focalY:item.focalY??0.5,focalXTablet:item.focalXTablet??item.focalX??0.5,focalYTablet:item.focalYTablet??item.focalY??0.5,focalXMobile:item.focalXMobile??item.focalX??0.5,focalYMobile:item.focalYMobile??item.focalY??0.5}:{title:'',subtitle:'',buttonText:'',buttonLink:'',mediaFileId:0,mediaType:'IMAGE',isActive:true,sortOrder:heroes.value.length,focalX:0.5,focalY:0.5,focalXTablet:0.5,focalYTablet:0.5,focalXMobile:0.5,focalYMobile:0.5});heroDialog.value=true}
@@ -22,7 +23,20 @@ async function saveHero(){try{if(heroFile.value){const file=await adminApi.uploa
 async function removeHero(id:number){if(!(await confirmDialog({title:'Видалити слайд?',message:'Цю дію не можна скасувати.',variant:'danger',confirmText:'Видалити'})))return;await adminApi.deleteHeroSlide(id);await load()}
 function editPromo(item?:AdminPromoBlock){promoId.value=item?.id??null;Object.assign(promoForm,item?{type:item.type,title:item.title,isActive:item.isActive,sortOrder:item.sortOrder,imageFileId:item.imageFileId??null,focalX:item.focalX??0.5,focalY:item.focalY??0.5,focalXTablet:item.focalXTablet??0.5,focalYTablet:item.focalYTablet??0.5,focalXMobile:item.focalXMobile??0.5,focalYMobile:item.focalYMobile??0.5}:{type:'CUSTOM',title:'',isActive:true,sortOrder:promos.value.length,imageFileId:null,focalX:0.5,focalY:0.5,focalXTablet:0.5,focalYTablet:0.5,focalXMobile:0.5,focalYMobile:0.5});promoDialog.value=true}
 async function savePromo(){try{if(promoId.value)await adminApi.updatePromoBlock(promoId.value,promoForm);else await adminApi.createPromoBlock(promoForm);promoDialog.value=false;await load()}catch(e){toast.error(getAdminError(e))}}
-async function addProduct(block:AdminPromoBlock){if(!promoProductId.value)return;try{await adminApi.addPromoProduct(block.id,promoProductId.value,block.products?.length||0);promoProductId.value=0;await load()}catch(e){toast.error(getAdminError(e))}}
+// Товар прив'язуємо за посиланням на сторінку товару (…/product/<slug>) — зручніше, ніж шукати ID
+const promoLinks=reactive<Record<number,string>>({})
+async function addProduct(block:AdminPromoBlock){
+  const slug=promoLinks[block.id]?.trim().match(/\/product\/([^/?#\s]+)/)?.[1]
+  if(!slug){toast.error('Вставте посилання на сторінку товару, напр. https://…/product/nazva-tovaru');return}
+  try{
+    const product=await catalogApi.getProductBySlug(decodeURIComponent(slug))
+    if(block.products?.some(p=>p.productId===product.id)){toast.warning('Цей товар уже в блоці');return}
+    await adminApi.addPromoProduct(block.id,product.id,block.products?.length||0)
+    promoLinks[block.id]=''
+    await load()
+    toast.success(`Додано: ${product.name}`)
+  }catch(e){toast.error(getAdminError(e,'Товар за посиланням не знайдено'))}
+}
 async function removePromo(id:number){if(!(await confirmDialog({title:'Видалити промо-блок?',message:'Цю дію не можна скасувати.',variant:'danger',confirmText:'Видалити'})))return;await adminApi.deletePromoBlock(id);await load()}
 function editPage(slug:'about'|'delivery'){pageSlug.value=slug;const item=pages.value.find(p=>p.slug===slug);pageExists.value=Boolean(item);Object.assign(pageForm,{title:item?.title||(slug==='about'?'Про нас':'Доставка і оплата'),contentText:typeof item?.contentJson?.text==='string'?item.contentJson.text:'',metaTitle:item?.metaTitle||'',metaDescription:item?.metaDescription||'',isActive:item?.isActive??true});pageDialog.value=true}
 async function savePage(){const dto={title:pageForm.title,contentJson:{text:pageForm.contentText},metaTitle:pageForm.metaTitle||undefined,metaDescription:pageForm.metaDescription||undefined,isActive:pageForm.isActive};try{if(pageExists.value)await adminApi.savePage(pageSlug.value,dto);else await adminApi.createPage(pageSlug.value,dto);pageDialog.value=false;await load();toast.success('Сторінку збережено')}catch(e){toast.error(getAdminError(e))}}
@@ -53,7 +67,7 @@ await load()
           <BBtn variant="icon" size="sm" class="!text-red-600" @click="removePromo(block.id)"><Icon name="lucide:trash-2"/></BBtn>
         </div>
         <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
-          <BInput v-model.number="promoProductId" type="number" min="1" label="ID товару" class="w-full sm:max-w-40" />
+          <BInput v-model="promoLinks[block.id]" label="Посилання на товар" placeholder="https://…/product/nazva-tovaru" class="w-full sm:max-w-md" @keydown.enter.prevent="addProduct(block)" />
           <BBtn variant="outline" @click="addProduct(block)">Прив’язати товар</BBtn>
         </div>
         <div class="mt-3 flex flex-wrap gap-2"><span v-for="link in block.products" :key="link.id" class="rounded-full bg-secondary-100 px-3 py-1 text-xs">{{ link.product?.name||`Товар #${link.productId}` }} <button class="ml-1" @click="adminApi.removePromoProduct(block.id,link.productId).then(load)">×</button></span></div>

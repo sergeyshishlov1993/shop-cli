@@ -103,11 +103,12 @@ function getPromoImage(block: PromoBlock) {
   return getFileUrl(block.imageFile, 'large') || getFileUrl(block.products[0]?.product.mainImage, 'large') || getDemoProductImage(block.id)
 }
 
-function getPromoBlockLink(type: PromoBlockType) {
-  if (type === 'NEW') return getProductSectionLink('isNew')
-  if (type === 'HIT') return getProductSectionLink('isHit')
-  if (type === 'SEASONAL') return getProductSectionLink('isSeasonal')
-  return '/catalog'
+// «Своє» веде в каталог саме цієї добірки (?promo=<id>), а не в увесь каталог
+function getPromoBlockLink(block: PromoBlock) {
+  if (block.type === 'NEW') return getProductSectionLink('isNew')
+  if (block.type === 'HIT') return getProductSectionLink('isHit')
+  if (block.type === 'SEASONAL') return getProductSectionLink('isSeasonal')
+  return `/catalog?promo=${block.id}`
 }
 
 useHead({
@@ -253,7 +254,7 @@ useHead({
     </template>
 
     <section v-for="block in activePromoBlocks" :key="block.id" class="store-container py-4 max-md:px-0 lg:py-6">
-      <NuxtLink :to="getPromoBlockLink(block.type)" class="home-promo group block">
+      <NuxtLink :to="getPromoBlockLink(block)" class="home-promo group block">
         <img :src="getPromoImage(block)" :alt="block.title" class="focal-media" :style="block.imageFile ? focalVars(block) : undefined" />
         <span class="home-promo__overlay">
           <span>

@@ -53,6 +53,7 @@ export function useProductList() {
     isNew: route.query.isNew === 'true' || undefined,
     isHit: route.query.isHit === 'true' || undefined,
     isSeasonal: route.query.isSeasonal === 'true' || undefined,
+    promo: route.query.promo ? Number(route.query.promo) : undefined,
     search: (route.query.search as string) || undefined,
     sort: (route.query.sort as SortOption) || undefined,
     page: route.query.page ? Number(route.query.page) : 1,
