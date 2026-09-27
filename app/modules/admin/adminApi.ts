@@ -1,3 +1,4 @@
+import { getAccessToken } from '~/plugins/api'
 import type { getFileUrl } from '~/modules/common/helpers/fileUrl'
 import type { ReturnCustomer, ReturnDetail, ReturnStatus, ReturnSummary } from '~/modules/returns/returns'
 export type AdminProductType = 'CLOTHING' | 'SHOES' | 'ACCESSORY'
@@ -431,13 +432,29 @@ export const adminApi = {
   deleteProduct(id: number) {
     return useNuxtApp().$api(`/admin/products/${id}`, { method: 'DELETE' })
   },
-  uploadFile(file: File) {
+  uploadFile(file: File, onProgress?: (percent: number) => void) {
     const body = new FormData()
     body.append('file', file)
-    return useNuxtApp().$api<AdminUploadedFile>('/admin/files/upload', {
-      method: 'POST',
-      body,
+    if (!onProgress) return useNuxtApp().$api<AdminUploadedFile>('/admin/files/upload', { method: 'POST', body })
+    // $fetch не віддає прогрес відправки — для великих відео йдемо через XHR
+    const { $refreshAccessToken } = useNuxtApp()
+    const url = `${import.meta.dev ? '/api' : useRuntimeConfig().public.apiBase}/admin/files/upload`
+    const send = (token: string | null) => new Promise<{ status: number, data: unknown }>((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', url)
+      xhr.withCredentials = true
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+      xhr.upload.onprogress = event => event.lengthComputable && onProgress(Math.round(event.loaded / event.total * 100))
+      xhr.onload = () => resolve({ status: xhr.status, data: (() => { try { return JSON.parse(xhr.responseText) } catch { return null } })() })
+      xhr.onerror = () => reject(new Error('Помилка мережі під час завантаження'))
+      xhr.send(body)
     })
+    return (async () => {
+      let res = await send(getAccessToken())
+      if (res.status === 401) res = await send(await $refreshAccessToken())
+      if (res.status >= 400) throw { data: res.data, statusCode: res.status }
+      return res.data as AdminUploadedFile
+    })()
   },
   productMedia(productId: number) {
     return useNuxtApp().$api<AdminProductMedia[]>(`/admin/products/${productId}/media`)

@@ -16,7 +16,8 @@ const pendingMainIndex = ref<number | null>(null)
 const instagramUrl = ref('')
 const pendingLinks = ref<string[]>([])
 const busy = ref(false)
-const progress = ref('')
+// Прогрес поточного файлу: відсоток відправки, потім обробка на сервері (відео конвертує ffmpeg)
+const upload = ref<{ name: string, index: number, total: number, percent: number } | null>(null)
 // Відео, що грає при наведенні на картку товару в каталозі (Product.hoverVideoFileId)
 const cardVideoFileId = ref<number | null>(null)
 
@@ -35,9 +36,9 @@ async function uploadPending(id: number) {
     let sortOrder = media.value.length
     const queue = [...files.value]
     for (const [index, file] of queue.entries()) {
-      progress.value = `${index + 1}/${queue.length}`
+      upload.value = { name: file.name, index: index + 1, total: queue.length, percent: 0 }
       try {
-        const uploaded = await adminApi.uploadFile(file)
+        const uploaded = await adminApi.uploadFile(file, percent => upload.value && (upload.value.percent = percent))
         const isMain = pendingMainIndex.value === null ? !hasMain && uploaded.fileType === 'IMAGE' : index === pendingMainIndex.value
         await adminApi.addProductMedia(id, { fileId: uploaded.id, mediaType: uploaded.fileType, isMain, sortOrder: sortOrder++ })
         hasMain ||= isMain
@@ -53,7 +54,7 @@ async function uploadPending(id: number) {
     pendingMainIndex.value = null
     await reload(id)
     if (queue.length && !failed) toast.success('Медіа додано')
-  } finally { busy.value = false; progress.value = '' }
+  } finally { busy.value = false; upload.value = null }
   return !failed
 }
 
@@ -143,7 +144,15 @@ defineExpose({ uploadPending, hasPending: () => files.value.length > 0 || pendin
       <ReviewMediaPicker v-model="files" v-model:main="pendingMainIndex" :max="20" :selectable-main="!productId" @error="toast.error" />
       <p v-if="!productId && files.length" class="text-xs text-secondary-500">Натисніть ★ на фото, щоб зробити його головним (інакше головним стане перше фото). Файли завантажаться після збереження товару.</p>
       <p v-if="productId" class="text-xs text-secondary-500">Файли завантажуються одразу. Головне фото та відео для картки обирайте кнопками під медіа вище.</p>
-      <span v-if="progress" class="ml-2 inline-flex items-center gap-2 text-sm text-secondary-500"><BSpinner size="sm" /> {{ progress }}</span>
+      <div v-if="upload" class="space-y-1.5" role="progressbar" :aria-valuenow="upload.percent" aria-valuemin="0" aria-valuemax="100">
+        <div class="flex justify-between gap-3 text-xs text-secondary-600">
+          <span class="truncate">Файл {{ upload.index }} з {{ upload.total }}: {{ upload.name }}</span>
+          <span class="shrink-0 font-medium">{{ upload.percent < 100 ? `${upload.percent}%` : 'Обробка на сервері…' }}</span>
+        </div>
+        <div class="h-2 overflow-hidden rounded-full bg-secondary-100">
+          <div class="h-full rounded-full bg-primary-500 transition-[width] duration-200" :class="{ 'animate-pulse': upload.percent === 100 }" :style="{ width: `${upload.percent}%` }" />
+        </div>
+      </div>
     </div>
 
     <div class="space-y-2 rounded-xl border border-dashed border-secondary-300 bg-white p-4">

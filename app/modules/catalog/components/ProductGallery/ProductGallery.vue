@@ -71,6 +71,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
   if (import.meta.client) document.body.style.overflow = ''
 })
+const isFileVideo = (item: { mediaType: string, externalUrl?: string | null }) => item.mediaType === 'VIDEO' && !item.externalUrl
 </script>
 
 <template>
@@ -83,7 +84,7 @@ onBeforeUnmount(() => {
     <template v-else>
       <!-- Десктоп (editorial): стрічка великих медіа, по 3 в кадрі, зі snap і стрілками -->
       <div v-if="editorial" class="product-gallery__strip-wrap">
-        <div ref="stripRef" v-drag-scroll class="product-gallery__strip">
+        <div ref="stripRef" v-drag-scroll class="product-gallery__strip" :class="{ 'product-gallery__strip--peek': items.length > 3 }">
           <div
             v-for="(item, index) in items"
             :key="item.id"
@@ -106,11 +107,11 @@ onBeforeUnmount(() => {
               v-else-if="item.mediaType === 'VIDEO'"
               :src="getFileUrl(item.file)"
               class="product-gallery__tile-asset"
-              autoplay
-              muted
-              loop
+              controls
               playsinline
               preload="metadata"
+              @click.stop
+              @keydown.stop
             />
             <img
               v-else
@@ -161,7 +162,14 @@ onBeforeUnmount(() => {
         @slide-changed="onMainSlideChanged"
       >
         <swiper-slide v-for="(item, index) in items" :key="item.id">
-          <button type="button" class="product-gallery__media" :aria-label="`Відкрити медіа ${index + 1} на весь екран`" @click="openFullscreen()">
+          <!-- Для відео — div, щоб працювали кнопки плеєра (всередині <button> вони не клікаються) -->
+          <component
+            :is="isFileVideo(item) ? 'div' : 'button'"
+            :type="isFileVideo(item) ? undefined : 'button'"
+            class="product-gallery__media"
+            :aria-label="isFileVideo(item) ? undefined : `Відкрити медіа ${index + 1} на весь екран`"
+            @click="!isFileVideo(item) && openFullscreen()"
+          >
             <iframe
               v-if="item.externalUrl"
               :src="getInstagramEmbedUrl(item.externalUrl) ?? undefined"
@@ -174,9 +182,7 @@ onBeforeUnmount(() => {
               v-else-if="item.mediaType === 'VIDEO'"
               :src="getFileUrl(item.file)"
               class="product-gallery__asset"
-              autoplay
-              muted
-              loop
+              controls
               playsinline
               preload="metadata"
             />
@@ -187,8 +193,8 @@ onBeforeUnmount(() => {
               class="product-gallery__asset"
               :style="{ objectPosition: focalPosition(item.focalX, item.focalY) }"
             />
-            <span class="product-gallery__expand"><Icon name="lucide:maximize-2" size="18" /></span>
-          </button>
+            <span v-if="!isFileVideo(item)" class="product-gallery__expand"><Icon name="lucide:maximize-2" size="18" /></span>
+          </component>
         </swiper-slide>
       </BSlider>
 
@@ -253,9 +259,6 @@ onBeforeUnmount(() => {
                   :src="getFileUrl(item.file)"
                   class="product-gallery-fullscreen__asset"
                   controls
-                  autoplay
-                  muted
-                  loop
                   playsinline
                 />
                 <img
@@ -621,6 +624,11 @@ onBeforeUnmount(() => {
   scrollbar-width: none;
 }
 
+/* Більше 3 медіа — видно шматок наступного, щоб було зрозуміло, що стрічку можна тягнути */
+.product-gallery__strip--peek {
+  grid-auto-columns: calc((100% - 12px) / 3.3);
+}
+
 .product-gallery__tile {
   position: relative;
   aspect-ratio: 3 / 4;
@@ -644,7 +652,8 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-iframe.product-gallery__tile-asset {
+iframe.product-gallery__tile-asset,
+video.product-gallery__tile-asset {
   pointer-events: auto;
 }
 
