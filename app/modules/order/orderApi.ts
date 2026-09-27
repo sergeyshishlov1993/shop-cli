@@ -19,14 +19,12 @@ interface CreateOrderDto {
 }
 
 export const orderApi = {
-  create(dto: CreateOrderDto, idempotencyKey?: string) {
+  create(dto: CreateOrderDto, idempotencyKey: string) {
     const { $api } = useNuxtApp()
     return $api<Order>('/storefront/orders', {
       method: 'POST',
       body: dto,
-      headers: idempotencyKey
-        ? { 'x-idempotency-key': idempotencyKey }
-        : undefined,
+      headers: { 'x-idempotency-key': idempotencyKey },
     })
   },
 

@@ -5,6 +5,7 @@ import { useAuthStore } from '~/modules/auth/authStore'
 import { useDeliveryStore } from '~/modules/delivery/deliveryStore'
 import { useOrderStore } from '~/modules/order/orderStore'
 import { couponApi } from '~/modules/coupon/couponApi'
+import { clearOrderIdempotencyKey, getOrderIdempotencyKey } from '~/modules/order/idempotency'
 import { useSettingsStore } from '~/modules/settings/settingsStore'
 
 definePageMeta({ middleware: 'checkout' })
@@ -124,7 +125,7 @@ async function submitOrder() {
   if (!validate() || cartStore.isEmpty) return
 
   try {
-    const order = await orderStore.createOrder({
+    const payload = {
       customerName: form.name.trim(),
       customerPhone: form.phone,
       customerEmail: form.email.trim() || undefined,
@@ -135,7 +136,9 @@ async function submitOrder() {
       comment: form.comment.trim() || undefined,
       couponCode: coupon.applied || undefined,
       ...getUtmData(),
-    }, crypto.randomUUID())
+    }
+    const idempotencyKey = await getOrderIdempotencyKey(payload, cartStore.cart?.items ?? [])
+    const order = await orderStore.createOrder(payload, idempotencyKey)
 
     useAnalytics().track('purchase', {
       transaction_id: order?.orderNumber,
@@ -144,6 +147,7 @@ async function submitOrder() {
     })
 
     cartStore.clearCart()
+    clearOrderIdempotencyKey()
     return order
   }
   catch {
