@@ -21,7 +21,10 @@ test('add to cart and place a courier order', async ({ page, request }) => {
 
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2)) // buy bar shows after the gallery
   await addBtn.click()
-  await expect(page.getByText('Товар додано в кошик')).toBeVisible()
+  // Після додавання відкривається бокова шторка кошика
+  const drawer = page.getByRole('dialog').filter({ hasText: 'Кошик' })
+  await expect(drawer.getByRole('link', { name: 'Оформити замовлення' }).or(drawer.getByRole('button', { name: 'Оформити замовлення' })).first()).toBeVisible()
+  await expect(drawer.getByText('Разом')).toBeVisible()
 
   await page.goto('/cart')
   await expect(page.getByRole('link', { name: /Оформ/ }).or(page.getByRole('button', { name: /Оформ/ })).first()).toBeVisible()

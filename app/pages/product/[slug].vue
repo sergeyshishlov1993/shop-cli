@@ -483,11 +483,23 @@ watch(isSizeChartOpen, async (isOpen) => {
           </div>
 
           <!-- Розмір не обрано: кнопки неактивні, натиск показує розміри (моб.) і підказку -->
-          <div class="grid shrink-0 grid-cols-2 items-center gap-2 md:flex max-md:[&_.b-btn]:!px-2 max-md:[&_.b-btn]:!text-[11px] max-md:[&_.b-btn]:!tracking-normal [&_button:disabled]:pointer-events-none" @click="sizes.length && !selectedSizeId && askSize()">
+          <div class="flex shrink-0 items-center gap-2">
+          <button
+              type="button"
+              class="flex size-11 shrink-0 items-center justify-center rounded-full border border-secondary-300 text-secondary-900 transition-colors hover:border-primary-300 hover:bg-primary-50"
+              :class="{ 'border-primary-200 bg-primary-50 text-primary-700': isFavorite }"
+              :aria-label="isFavorite ? 'Прибрати з обраного' : 'Додати в обране'"
+              :aria-pressed="isFavorite"
+              @click="toggleFavorite"
+          >
+            <Icon :name="isFavorite ? 'mdi:heart' : 'mdi:heart-outline'" size="20" />
+          </button>
+          <div class="grid min-w-0 flex-1 shrink-0 grid-cols-2 items-center gap-2 md:flex max-md:[&_.b-btn]:!px-2 max-md:[&_.b-btn]:!text-[11px] max-md:[&_.b-btn]:!tracking-normal [&_button:disabled]:pointer-events-none" @click="sizes.length && !selectedSizeId && askSize()">
             <BBtn variant="outline" class="min-w-0 whitespace-nowrap md:w-56" :disabled="!isPurchasable" @click="openQuickBuy">Купити в 1 клік</BBtn>
             <div class="min-w-0 whitespace-nowrap md:w-56">
               <AddToCartBtn compact :variant-id="currentVariant?.id ?? null" :disabled="!isPurchasable" />
             </div>
+          </div>
           </div>
         </div>
       </div>

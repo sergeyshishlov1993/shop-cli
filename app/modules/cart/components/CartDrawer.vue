@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useCartStore } from '~/modules/cart/cartStore'
+import CartItem from '~/modules/cart/components/CartItem.vue'
 
 interface Props {
   modelValue: boolean
@@ -24,15 +25,15 @@ const close = () => emit('update:modelValue', false)
       width="w-96"
       @update:model-value="emit('update:modelValue', $event)"
   >
-    <div v-if="cartStore.isEmpty" class="flex flex-1 flex-col items-center justify-center gap-4 py-12">
-      <Icon name="mdi:cart-outline" class="h-16 w-16 text-gray-300" />
-      <p class="text-sm text-gray-500">Кошик порожній</p>
+    <div v-if="cartStore.isEmpty" class="flex flex-1 flex-col items-center justify-center gap-4 p-5 py-12">
+      <Icon name="mdi:cart-outline" class="h-16 w-16 text-secondary-300" />
+      <p class="text-sm text-secondary-500">Кошик порожній</p>
       <BBtn variant="outline" size="sm" @click="close">
         Продовжити покупки
       </BBtn>
     </div>
 
-    <div v-else class="flex flex-col gap-4">
+    <div v-else class="flex flex-col gap-4 p-5">
       <CartItem
           v-for="item in cartStore.cart?.items"
           :key="item.id"
@@ -43,8 +44,8 @@ const close = () => emit('update:modelValue', false)
     <template v-if="!cartStore.isEmpty" #footer>
       <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between">
-          <span class="text-sm text-gray-600">Разом ({{ cartStore.itemsCount }})</span>
-          <span class="text-base font-bold text-gray-900">{{ formatPrice(cartStore.subtotal) }}</span>
+          <span class="text-sm text-secondary-600">Разом ({{ cartStore.itemsCount }} од.)</span>
+          <span class="text-base font-bold text-secondary-950">{{ formatPrice(cartStore.subtotal) }}</span>
         </div>
 
         <BBtn
@@ -56,6 +57,7 @@ const close = () => emit('update:modelValue', false)
         >
           Оформити замовлення
         </BBtn>
+        <BBtn variant="outline" block to="/cart" @click="close">Переглянути кошик</BBtn>
       </div>
     </template>
   </BDrawer>

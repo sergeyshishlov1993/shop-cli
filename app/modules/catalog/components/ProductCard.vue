@@ -137,8 +137,8 @@ async function addToCart() {
   if (!selectedVariant.value) return
   try {
     await cartStore.addToCart(selectedVariant.value.id, quantity.value)
-    isAdded.value = true
-    toast.success('Товар додано в кошик')
+    closeModal()
+    cartStore.isDrawerOpen = true
   }
   catch {
     toast.error('Не вдалося додати товар у кошик')

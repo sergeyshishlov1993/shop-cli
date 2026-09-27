@@ -6,6 +6,8 @@ import type { Cart, AddCartItemDto, UpdateCartItemDto } from '~/modules/cart/typ
 export const useCartStore = defineStore('cart', () => {
     const cart = ref<Cart | null>(null)
     const isLoading = ref(false)
+    // Бокова шторка кошика — відкривається після додавання товару
+    const isDrawerOpen = ref(false)
 
     const itemsCount = computed(() => cart.value?.totalItems ?? 0)
     const subtotal = computed(() => cart.value?.subtotal ?? 0)
@@ -63,6 +65,7 @@ export const useCartStore = defineStore('cart', () => {
     return {
         cart,
         isLoading,
+        isDrawerOpen,
         itemsCount,
         subtotal,
         isEmpty,

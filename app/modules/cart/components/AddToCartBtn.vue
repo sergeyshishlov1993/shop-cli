@@ -25,7 +25,7 @@ async function handleAdd() {
   isAdding.value = true
   try {
     await cartStore.addToCart(props.variantId, 1)
-    toast.success('Товар додано в кошик')
+    cartStore.isDrawerOpen = true
   } catch {
     toast.error('Не вдалося додати товар у кошик')
   } finally {

@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { useCartStore } from '~/modules/cart/cartStore'
+import CartDrawer from '~/modules/cart/components/CartDrawer.vue'
 // На мобільному оформленні — спрощена шапка самої сторінки (як у Gepur), без меню і футера.
 const route = useRoute()
 const isCheckout = computed(() => route.path === '/checkout')
+const cartStore = useCartStore()
 </script>
 
 <template>
@@ -11,5 +14,6 @@ const isCheckout = computed(() => route.path === '/checkout')
       <slot />
     </main>
     <AppFooter :class="{ 'max-lg:hidden': isCheckout }" />
+    <CartDrawer v-model="cartStore.isDrawerOpen" />
   </div>
 </template>
