@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ProductCard from '~/modules/catalog/components/ProductCard.vue'
+import QuickAddModal from '~/modules/catalog/components/QuickAddModal.vue'
 import ProductGrid from '~/modules/catalog/components/ProductGrid/ProductGrid.vue'
 import { useFavoritesStore } from '~/modules/favorites/favoritesStore'
 import { useConfirm } from '~/modules/ui/composables/useConfirm'
@@ -20,6 +21,14 @@ const viewOptions: Array<{ value: FavoritesView, label: string, icon: string }> 
   { value: 'list', label: 'Список', icon: 'lucide:list' },
 ]
 const { confirm } = useConfirm()
+
+// Швидке додавання в кошик зі списку — та сама модалка, що й у ProductCard
+const quickAddProduct = ref<ProductListItem | null>(null)
+const quickAddOpen = ref(false)
+function openQuickAdd(product: ProductListItem) {
+  quickAddProduct.value = product
+  quickAddOpen.value = true
+}
 
 async function removeFavorite(product: ProductListItem) {
   if (!(await confirm({ title: 'Прибрати з обраного?', message: product.name, confirmText: 'Прибрати', variant: 'warning' }))) return
@@ -115,11 +124,15 @@ useSeoMeta({
               <span v-if="product.oldPrice" class="text-xs text-secondary-400 line-through">{{ formatPrice(product.oldPrice) }}</span>
             </p>
             <div class="mt-auto flex flex-wrap gap-2">
-              <BBtn :to="`/product/${product.slug}`" variant="primary" size="sm">Обрати розмір</BBtn>
+              <BBtn variant="primary" size="sm" @click="openQuickAdd(product)">
+                <Icon name="lucide:shopping-bag" size="16" />
+                Додати в кошик
+              </BBtn>
             </div>
           </div>
         </li>
       </ul>
+      <QuickAddModal v-if="quickAddProduct" :key="quickAddProduct.id" v-model:open="quickAddOpen" :product="quickAddProduct" />
 
       <BPagination
         v-if="view !== 'grid' && totalPages > 1"
