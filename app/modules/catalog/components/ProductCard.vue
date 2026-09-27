@@ -77,6 +77,27 @@ const hoverImageUrl = computed(() => getFileUrl(props.product.hoverImage, 'mediu
 
 const hoverVideoUrl = computed(() => getFileUrl(props.product.hoverVideo) || null)
 
+// sizes/defaultVariantId можуть ще не приходити з API — тоді швидке додавання через модалку
+type CardExtras = { sizes?: { variantId: number; name: string; available: boolean }[]; defaultVariantId?: number | null }
+const extras = computed(() => props.product as ProductListItem & CardExtras)
+const cardSizes = computed(() => extras.value.sizes ?? [])
+
+async function addVariant(variantId: number) {
+  try {
+    await cartStore.addToCart(variantId, 1)
+    cartStore.isDrawerOpen = true
+  }
+  catch {
+    toast.error('Не вдалося додати товар у кошик')
+  }
+}
+
+function addDefault() {
+  const id = extras.value.defaultVariantId
+  if (id) addVariant(id)
+  else openQuickAdd()
+}
+
 const displayImage = computed(() => {
   if (isHovered.value && hoverImageUrl.value) return hoverImageUrl.value
   return mainImageUrl.value
@@ -200,11 +221,10 @@ onMounted(() => {
     </div>
   </div>
   <div v-else :class="['product-card group relative flex h-full flex-col', { 'product-card--compact': compact }]">
+    <div class="relative" @mouseenter="isHovered = true" @mouseleave="isHovered = false">
     <NuxtLink
         :to="`/product/${product.slug}`"
-        class="product-card__image relative aspect-[3/4] overflow-hidden rounded-sm bg-secondary-100"
-        @mouseenter="isHovered = true"
-        @mouseleave="isHovered = false"
+        class="product-card__image relative block aspect-[3/4] overflow-hidden rounded-sm bg-secondary-100"
     >
       <video
           v-if="isHovered && hoverVideoUrl"
@@ -266,6 +286,47 @@ onMounted(() => {
       </button>
     </NuxtLink>
 
+    <template v-if="!compact">
+      <!-- Десктоп: швидке додавання по наведенню (розмір → одразу в кошик) -->
+      <div class="glass glass--strong absolute inset-x-2 bottom-2 hidden flex-col gap-2 p-3 opacity-0 transition-opacity group-hover:opacity-100 lg:flex">
+        <template v-if="cardSizes.length">
+          <span class="text-center text-xs font-medium uppercase tracking-widest text-secondary-900">Додати до кошика</span>
+          <div class="flex flex-wrap justify-center gap-1.5">
+            <button
+                v-for="size in cardSizes"
+                :key="size.variantId"
+                type="button"
+                class="min-w-9 rounded-full border border-secondary-300 px-2.5 py-1 text-xs text-secondary-900 transition-colors hover:border-secondary-900 hover:bg-secondary-900 hover:text-white disabled:pointer-events-none disabled:opacity-35 disabled:line-through"
+                :disabled="!size.available || cartStore.isLoading"
+                @click="addVariant(size.variantId)"
+            >
+              {{ size.name }}
+            </button>
+          </div>
+        </template>
+        <button
+            v-else
+            type="button"
+            class="text-xs font-medium uppercase tracking-widest text-secondary-900 hover:text-secondary-600"
+            :disabled="cartStore.isLoading"
+            @click="addDefault"
+        >
+          Додати до кошика
+        </button>
+      </div>
+
+      <!-- Мобільний (без hover): маленька кнопка швидкого додавання -->
+      <button
+          type="button"
+          class="glass absolute bottom-2 right-2 flex size-8 items-center justify-center rounded-full text-secondary-900 lg:hidden"
+          aria-label="Швидке додавання"
+          @click="openQuickAdd"
+      >
+        <Icon name="lucide:shopping-bag" size="16" />
+      </button>
+    </template>
+    </div>
+
     <div v-if="compact" class="mt-2 flex items-end gap-2">
       <NuxtLink :to="`/product/${product.slug}`" class="flex min-w-0 flex-1 flex-col gap-0.5">
         <span class="truncate text-[13px] text-secondary-700">{{ product.name }}</span>
@@ -301,17 +362,6 @@ onMounted(() => {
           {{ product.oldPrice }} ₴
         </span>
       </div>
-
-      <BBtn
-          variant="primary"
-          size="sm"
-          block
-          class="mt-auto sm:mt-auto"
-          @click="openQuickAdd"
-      >
-        <Icon name="mdi:cart-outline" size="16" />
-        Додати в кошик
-      </BBtn>
     </div>
 
   </div>

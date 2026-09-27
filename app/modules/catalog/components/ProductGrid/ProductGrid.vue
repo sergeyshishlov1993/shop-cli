@@ -6,6 +6,8 @@ interface Props {
   loading?: boolean
   page: number
   totalPages: number
+  // Великі картки: 2 колонки на десктопі, 1 на мобільному
+  large?: boolean
 }
 
 interface Emits {
@@ -14,12 +16,10 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
+  large: false,
 })
 
 defineEmits<Emits>()
-
-// Мобільний вигляд каталогу (як у Gepur): 1 або 2 колонки, перемикач у тулбарі сторінки.
-const mobileColumns = useLocalStorage<1 | 2>('catalog-mobile-columns', 2, { initOnMounted: true })
 </script>
 
 <template>
@@ -58,8 +58,8 @@ const mobileColumns = useLocalStorage<1 | 2>('catalog-mobile-columns', 2, { init
         </div>
 
         <div
-          class="loading-blur catalog-grid grid gap-x-0.5 gap-y-5 -mx-4 sm:-mx-6 md:grid-cols-3 lg:mx-0 lg:grid-cols-4 lg:gap-4"
-          :class="[mobileColumns === 1 ? 'grid-cols-1' : 'grid-cols-2', { 'pointer-events-none': loading }]"
+          class="loading-blur catalog-grid grid gap-x-0.5 gap-y-5 -mx-4 sm:-mx-6 lg:mx-0 lg:gap-x-4 lg:gap-y-8"
+          :class="[large ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4', { 'pointer-events-none': loading }]"
         >
           <ProductCard
             v-for="product in products"
@@ -99,8 +99,7 @@ const mobileColumns = useLocalStorage<1 | 2>('catalog-mobile-columns', 2, { init
     padding-inline: 0.5rem;
   }
 
-  .catalog-grid :deep(.product-card > div.mt-3 > span:first-child),
-  .catalog-grid :deep(.product-card > div.mt-3 > .b-btn) {
+  .catalog-grid :deep(.product-card > div.mt-3 > span:first-child) {
     display: none;
   }
 

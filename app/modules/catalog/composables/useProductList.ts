@@ -136,6 +136,13 @@ export function useProductList() {
     syncToUrl()
   }
 
+  /** Застосувати кілька фільтрів одним кроком (шторка фільтрів, кнопка «Показати»). */
+  function applyFilters(patch: Partial<CatalogQuery>) {
+    loading.value = true
+    Object.assign(params, patch, { page: 1 })
+    syncToUrl()
+  }
+
   function resetFilters() {
     const keep = { page: 1, limit: params.limit, category: params.category }
     const nextParams = {
@@ -194,6 +201,7 @@ export function useProductList() {
     setFilter,
     setPage,
     setSort,
+    applyFilters,
     resetFilters,
     fetchProducts,
   }
