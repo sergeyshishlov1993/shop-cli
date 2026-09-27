@@ -248,13 +248,19 @@ onMounted(() => {
       </button>
     </NuxtLink>
 
-    <NuxtLink v-if="compact" :to="`/product/${product.slug}`" class="mt-2 flex min-w-0 flex-col gap-0.5">
-      <span class="truncate text-[13px] text-secondary-700">{{ product.name }}</span>
-      <span class="flex items-baseline gap-2">
-        <span class="text-sm font-semibold text-secondary-900">{{ product.effectivePrice }} ₴</span>
-        <span v-if="hasDiscount" class="text-xs text-secondary-400 line-through">{{ product.oldPrice }} ₴</span>
-      </span>
-    </NuxtLink>
+    <div v-if="compact" class="mt-2 flex items-end gap-2">
+      <NuxtLink :to="`/product/${product.slug}`" class="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span class="truncate text-[13px] text-secondary-700">{{ product.name }}</span>
+        <span class="flex items-baseline gap-2">
+          <span class="text-sm font-semibold text-secondary-900">{{ product.effectivePrice }} ₴</span>
+          <span v-if="hasDiscount" class="text-xs text-secondary-400 line-through">{{ product.oldPrice }} ₴</span>
+        </span>
+      </NuxtLink>
+      <!-- Компактна картка (рейки, шторка кошика): швидке додавання, як у Gepur -->
+      <BBtn variant="icon" size="sm" class="shrink-0 !bg-secondary-900 !text-white hover:!bg-secondary-700" aria-label="Додати в кошик" title="Додати в кошик" @click="openQuickAdd">
+        <Icon name="lucide:shopping-bag" size="16" />
+      </BBtn>
+    </div>
 
     <div v-if="!compact" class="mt-3 flex flex-1 flex-col gap-1">
       <span v-if="product.brand" class="truncate text-xs text-secondary-500">
@@ -294,6 +300,7 @@ onMounted(() => {
         v-model="isModalOpen"
         title="Оберіть варіант"
         size="md"
+        on-top
         @update:model-value="!$event && closeModal()"
     >
       <div v-if="loadingVariants" class="flex items-center justify-center py-8">

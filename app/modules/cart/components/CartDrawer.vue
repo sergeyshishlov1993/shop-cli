@@ -30,6 +30,9 @@ watch(() => props.modelValue, async (open) => {
   recommended.value = [...new Map(list.filter(p => !inCart.has(p.id)).map(p => [p.id, p])).values()].slice(0, 8)
 })
 
+// Щойно доданий з рекомендацій товар зникає зі стрічки
+const visibleRecommended = computed(() => recommended.value.filter(p => !cartStore.cart?.items.some(item => item.product.id === p.id)))
+
 // Перехід на товар з рекомендацій — шторку закриваємо
 const route = useRoute()
 watch(() => route.fullPath, close)
@@ -58,10 +61,10 @@ watch(() => route.fullPath, close)
           :item="item"
       />
 
-      <section v-if="recommended.length" class="mt-4 border-t border-secondary-200 pt-4">
+      <section v-if="visibleRecommended.length" class="mt-4 border-t border-secondary-200 pt-4">
         <h3 class="mb-3 text-sm font-medium uppercase tracking-[0.12em] text-secondary-900">Вам може сподобатися</h3>
         <div v-drag-scroll class="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none]">
-          <div v-for="item in recommended" :key="item.id" class="w-36 shrink-0">
+          <div v-for="item in visibleRecommended" :key="item.id" class="w-36 shrink-0">
             <ProductCard :product="item" compact />
           </div>
         </div>
