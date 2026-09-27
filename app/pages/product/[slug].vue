@@ -369,7 +369,7 @@ watch(isSizeChartOpen, async (isOpen) => {
                     type="button"
                     :disabled="!isColorAvailable(color.id)"
                     class="flex size-11 items-center justify-center rounded-full border transition-all"
-                    :class="selectedColorId === color.id ? 'border-secondary-950 ring-2 ring-primary-200' : 'border-secondary-200 hover:border-secondary-400'"
+                    :class="selectedColorId === color.id ? 'border-secondary-900 ring-2 ring-secondary-900 ring-offset-2' : 'border-secondary-200 hover:border-secondary-400'"
                     :aria-label="color.name"
                     :aria-pressed="selectedColorId === color.id"
                     @click="selectColor(color.id)"

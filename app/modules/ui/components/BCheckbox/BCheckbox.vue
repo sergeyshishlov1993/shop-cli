@@ -40,7 +40,7 @@ const boxSize = computed(() => props.size === 'sm' ? 'size-4' : 'size-[1.125rem]
     >
     <span
       class="flex shrink-0 items-center justify-center rounded-[4px] border border-secondary-300 bg-white text-white transition-colors peer-focus-visible:ring-1 peer-focus-visible:ring-primary-400 peer-focus-visible:ring-offset-2"
-      :class="[boxSize, modelValue ? '!border-primary-500 !bg-primary-500' : '']"
+      :class="[boxSize, modelValue ? '!border-secondary-900 !bg-secondary-900' : '']"
     >
       <Icon v-if="modelValue" name="lucide:check" class="size-3" />
     </span>

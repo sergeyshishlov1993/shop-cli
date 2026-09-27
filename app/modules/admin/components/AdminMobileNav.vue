@@ -25,7 +25,7 @@ watch(() => route.fullPath, () => { isMoreOpen.value = false })
         :key="tab.to"
         :to="tab.to"
         class="flex h-16 flex-col items-center justify-center gap-1 text-[11px] transition-colors"
-        :class="isActive(tab) ? 'text-primary-700' : 'text-secondary-600'"
+        :class="isActive(tab) ? 'text-secondary-900 font-semibold' : 'text-secondary-600'"
     >
       <Icon :name="tab.icon" size="22" />
       {{ tab.label }}
@@ -33,7 +33,7 @@ watch(() => route.fullPath, () => { isMoreOpen.value = false })
     <button
         type="button"
         class="flex h-16 flex-col items-center justify-center gap-1 text-[11px] text-secondary-600"
-        :class="{ 'text-primary-700': isMoreOpen }"
+        :class="{ 'text-secondary-900 font-semibold': isMoreOpen }"
         @click="isMoreOpen = true"
     >
       <Icon name="lucide:menu" size="22" />

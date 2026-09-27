@@ -40,7 +40,7 @@ const visibleLinks = computed(() => links.filter(link => returnsEnabled.value ||
       :key="link.to"
       :to="link.to"
       class="inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition"
-      :class="isActive(link.to) ? 'bg-primary-500 text-white' : 'glass text-secondary-700 hover:text-primary-700'"
+      :class="isActive(link.to) ? 'bg-secondary-900 text-white' : 'glass text-secondary-700 hover:text-primary-700'"
     >
       <Icon :name="link.icon" size="17" />
       {{ link.label }}

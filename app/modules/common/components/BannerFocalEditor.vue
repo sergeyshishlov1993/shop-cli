@@ -76,7 +76,7 @@ function copyToAll() {
           :key="d.id"
           type="button"
           class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors"
-          :class="active === d.id ? 'border-primary-500 bg-primary-50 text-primary-800' : 'border-gray-200 text-gray-600'"
+          :class="active === d.id ? 'border-secondary-900 bg-secondary-900 text-white' : 'border-gray-200 text-gray-600'"
           @click="active = d.id"
       >
         <Icon :name="d.icon" size="16" /> {{ d.label }}
@@ -120,7 +120,7 @@ function copyToAll() {
         >
           <span
               class="block overflow-hidden rounded border-2"
-              :class="[active === d.id ? 'border-primary-500' : 'border-gray-200', d.id === 'mobile' ? 'w-14' : d.id === 'tablet' ? 'w-16' : 'w-28']"
+              :class="[active === d.id ? 'border-secondary-900' : 'border-gray-200', d.id === 'mobile' ? 'w-14' : d.id === 'tablet' ? 'w-16' : 'w-28']"
               :style="{ aspectRatio: d.ratio }"
           >
             <img :src="src" alt="" class="h-full w-full object-cover" :style="{ objectPosition: position(d) }" />

@@ -51,7 +51,7 @@ function remove(index: number) {
           variant="icon"
           size="sm"
           class="absolute bottom-0.5 left-0.5 !size-6"
-          :class="mainIndex === index ? '!bg-primary-600 !text-white' : '!bg-white/85'"
+          :class="mainIndex === index ? '!bg-secondary-900 !text-white' : '!bg-white/85'"
           :aria-label="mainIndex === index ? 'Головне фото' : 'Зробити головним'"
           :title="mainIndex === index ? 'Головне фото' : 'Зробити головним'"
           @click="mainIndex = index"

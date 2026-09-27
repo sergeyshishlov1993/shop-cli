@@ -104,7 +104,7 @@ watch(selectedVariant, v => emit('select', v?.id ?? null))
             :title="color.name"
             :class="[
             'h-10 w-10 rounded-full border-2 transition',
-            selectedColorId === color.id ? 'border-primary-600 ring-2 ring-primary-200' : 'border-gray-200',
+            selectedColorId === color.id ? 'border-secondary-900 ring-2 ring-secondary-900 ring-offset-2' : 'border-gray-200',
             !availableColorIds.has(color.id) && 'cursor-not-allowed opacity-30',
           ]"
             :style="{ backgroundColor: color.hexCode ?? '#e5e7eb' }"
@@ -129,7 +129,7 @@ watch(selectedVariant, v => emit('select', v?.id ?? null))
             :class="[
             'min-w-[48px] rounded-lg border px-3 py-2 text-sm font-medium transition',
             selectedSizeId === size.id
-              ? 'border-primary-600 bg-primary-50 text-primary-700'
+              ? 'border-secondary-900 bg-secondary-900 text-white'
               : 'border-gray-200 text-gray-700 hover:border-gray-400',
             !availableSizeIds.has(size.id) && 'cursor-not-allowed opacity-40 line-through hover:border-gray-200',
           ]"

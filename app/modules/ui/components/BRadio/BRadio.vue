@@ -38,7 +38,7 @@ const isChecked = computed(() => props.modelValue === props.value)
     :class="[
       disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
       variant === 'card'
-        ? ['flex gap-3 rounded-xl border p-4 transition-colors', isChecked ? 'border-primary-500 bg-primary-50' : 'border-secondary-200 hover:border-secondary-300']
+        ? ['flex gap-3 rounded-xl border p-4 transition-colors', isChecked ? 'border-secondary-900' : 'border-secondary-200 hover:border-secondary-300']
         : 'inline-flex',
     ]"
   >

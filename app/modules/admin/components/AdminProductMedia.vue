@@ -114,7 +114,8 @@ defineExpose({ uploadPending, hasPending: () => files.value.length > 0 || pendin
             v-if="item.mediaType === 'IMAGE'"
             size="sm"
             block
-            :variant="item.isMain ? 'primary' : 'outline'"
+            variant="outline"
+            :class="item.isMain && '!bg-secondary-900 !text-white'"
             :disabled="busy || item.isMain"
             @click="setMain(item.id)"
           >
@@ -124,7 +125,8 @@ defineExpose({ uploadPending, hasPending: () => files.value.length > 0 || pendin
             v-if="item.mediaType === 'IMAGE'"
             size="sm"
             block
-            :variant="item.isHover ? 'primary' : 'outline'"
+            variant="outline"
+            :class="item.isHover && '!bg-secondary-900 !text-white'"
             :disabled="busy"
             @click="toggleHover(item)"
           >
@@ -134,7 +136,8 @@ defineExpose({ uploadPending, hasPending: () => files.value.length > 0 || pendin
             v-else-if="item.file"
             size="sm"
             block
-            :variant="item.file?.id === cardVideoFileId ? 'primary' : 'outline'"
+            variant="outline"
+            :class="item.file?.id === cardVideoFileId && '!bg-secondary-900 !text-white'"
             :disabled="busy"
             @click="toggleCardVideo(item.file.id)"
           >

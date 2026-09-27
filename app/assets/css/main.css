@@ -950,3 +950,15 @@
 :is(h1, h2, h3, h4) a:hover {
     color: var(--color-primary-700);
 }
+
+/* Активний стан (чип, розмір, вкладка, пункт меню) — bg-secondary-900 + text-white. У темній темі шкала
+   перевернута і фон стає світлим, тож текст беремо з протилежного кінця шкали. */
+:root[data-theme="dark"] .bg-secondary-900.text-white,
+:root[data-theme="dark"] .\!bg-secondary-900.\!text-white,
+:root[data-theme="dark"] .\!bg-secondary-900.text-white {
+    color: var(--color-secondary-50) !important;
+}
+
+:root[data-theme="dark"] .hover\:bg-secondary-900.hover\:text-white:hover {
+    color: var(--color-secondary-50);
+}

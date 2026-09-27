@@ -179,7 +179,7 @@ async function onReply(dto: { text: string; media: File[] }) {
             :key="item.id"
             type="button"
             class="relative size-14 shrink-0 overflow-hidden rounded-md border-2"
-            :class="i === mediaIndex ? 'border-primary-500' : 'border-transparent opacity-60 hover:opacity-100'"
+            :class="i === mediaIndex ? 'border-secondary-900' : 'border-transparent opacity-60 hover:opacity-100'"
             @click="mediaIndex = i"
           >
             <template v-if="item.mediaType === 'VIDEO'">

@@ -412,7 +412,7 @@ onMounted(() => {
               v-for="color in colors"
               :key="color!.id"
               class="h-8 w-8 rounded-full border-2 transition-colors"
-              :class="selectedColor === color!.id ? 'border-primary-500' : 'border-secondary-200'"
+              :class="selectedColor === color!.id ? 'border-secondary-900' : 'border-secondary-200'"
               :style="{ backgroundColor: color!.hexCode ?? '#ccc' }"
               :title="color!.name"
               @click="selectColor(color!.id)"
@@ -429,7 +429,7 @@ onMounted(() => {
               class="rounded-lg border px-3 py-1.5 text-sm transition-colors"
               :class="
               selectedSizeName === (variant.size?.name ?? variant.sku)
-                ? 'border-primary-500 bg-primary-50 text-primary-700'
+                ? 'border-secondary-900 bg-secondary-900 text-white'
                 : 'border-secondary-200 text-secondary-700 hover:border-secondary-400'
             "
               @click="selectSize(variant.size?.name ?? variant.sku)"

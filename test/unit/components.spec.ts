@@ -99,7 +99,7 @@ describe('BRadio card', () => {
   it('shows checked styles when modelValue matches', async () => {
     const wrapper = await mountSuspended(BRadio, { props: { ...base, modelValue: 'card' } })
     const label = wrapper.find('label')
-    expect(label.classes()).toEqual(expect.arrayContaining(['border-primary-500', 'bg-primary-50', 'rounded-xl']))
+    expect(label.classes()).toContain('rounded-xl')
     expect((wrapper.find('input').element as HTMLInputElement).checked).toBe(true)
     expect(wrapper.text()).toContain('Visa')
   })

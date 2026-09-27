@@ -55,7 +55,7 @@ const visibleNavigation = computed(() => navigation.filter(item => returnsEnable
         :key="item.to"
         :to="item.to"
         class="flex items-center rounded-lg py-3 text-sm text-secondary-700 transition hover:bg-secondary-100 hover:text-secondary-900"
-        :class="[collapsed ? 'justify-center px-2' : 'gap-3 px-4', isActive(item.to) && '!bg-primary-100 font-semibold !text-primary-800']"
+        :class="[collapsed ? 'justify-center px-2' : 'gap-3 px-4', isActive(item.to) && '!bg-secondary-900 font-semibold !text-white']"
         active-class=""
         exact-active-class=""
         :title="collapsed ? item.label : undefined"

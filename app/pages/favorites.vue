@@ -58,7 +58,7 @@ useSeoMeta({
           :key="option.value"
           type="button"
           class="flex h-9 items-center gap-1.5 rounded-full px-3 text-sm transition-colors"
-          :class="view === option.value ? 'bg-primary-500 text-white' : 'text-secondary-700 hover:text-primary-700'"
+          :class="view === option.value ? 'bg-secondary-900 text-white' : 'text-secondary-700 hover:text-primary-700'"
           :aria-pressed="view === option.value"
           @click="view = option.value"
         >

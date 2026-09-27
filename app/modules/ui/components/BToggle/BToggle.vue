@@ -35,7 +35,7 @@ const toggleId = useId()
     >
     <span
       class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors peer-focus-visible:ring-1 peer-focus-visible:ring-primary-400 peer-focus-visible:ring-offset-2"
-      :class="modelValue ? 'border-primary-500 bg-primary-500' : 'border-secondary-300 bg-secondary-200'"
+      :class="modelValue ? 'border-secondary-900 bg-secondary-900' : 'border-secondary-300 bg-secondary-200'"
     >
       <span
         class="absolute size-4 rounded-full bg-white transition-transform"
