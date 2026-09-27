@@ -27,22 +27,33 @@ const colorMap = {
   info: 'bg-sky-600 text-white',
 } as const
 
+// Коли відкрита шторка кошика, тости її перекривають — показуємо їх коротко
+const DRAWER_DURATION = 1500
+function schedule(id: number, ms: number) {
+  clearTimeout(timers.get(id))
+  timers.set(id, setTimeout(() => {
+    timers.delete(id)
+    remove(id)
+  }, ms))
+}
+
 watch(
   toasts,
   (items) => {
     if (!import.meta.client) return
-
     for (const toast of items) {
-      if (timers.has(toast.id)) continue
-
-      timers.set(toast.id, setTimeout(() => {
-        timers.delete(toast.id)
-        remove(toast.id)
-      }, toast.duration))
+      if (!timers.has(toast.id)) schedule(toast.id, cartStore.isDrawerOpen ? Math.min(toast.duration, DRAWER_DURATION) : toast.duration)
     }
   },
   { deep: true, immediate: true },
 )
+
+// Шторка відкрилась — вже показані тости теж ховаємо швидше
+watch(() => cartStore.isDrawerOpen, open => open && toasts.value.forEach(toast => schedule(toast.id, DRAWER_DURATION)))
+
+// Перехід на іншу сторінку (напр. «До обраного» з тосту) — тости товару вже не актуальні
+const route = useRoute()
+watch(() => route.path, () => toasts.value.filter(toast => toast.product).forEach(toast => remove(toast.id)))
 
 onBeforeUnmount(() => {
   for (const timer of timers.values()) clearTimeout(timer)
