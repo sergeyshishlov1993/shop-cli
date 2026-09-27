@@ -33,6 +33,9 @@ export default defineNuxtPlugin((nuxtApp) => {
         pointerId = null
         el.style.scrollSnapType = ''
         el.style.cursor = ''
+        // Після перетягування браузер сам не «доводить» до слайда — докручуємо до найближчого (якщо стрічка зі snap)
+        const step = (el.firstElementChild?.getBoundingClientRect().width ?? 0) + (parseFloat(getComputedStyle(el).columnGap) || 0)
+        if (moved && step && getComputedStyle(el).scrollSnapType !== 'none') el.scrollTo({ left: Math.round(el.scrollLeft / step) * step, behavior: 'smooth' })
       }
       el.addEventListener('pointerup', end)
       el.addEventListener('pointercancel', end)

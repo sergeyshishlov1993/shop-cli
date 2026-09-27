@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getInstagramEmbedUrl } from '~/modules/common/helpers/fileUrl'
 import { useProductDetail } from '~/modules/catalog/composables/useProductDetail'
 import { useCatalogStore } from '~/modules/catalog/catalogStore'
 import { useCartStore } from '~/modules/cart/cartStore'
@@ -90,9 +91,10 @@ const availabilityLabel = computed(() => {
 const isSizeSheetOpen = ref(false)
 const isDescriptionOpen = ref(false)
 const galleryRef = ref<HTMLElement | null>(null)
-const mainPhoto = computed(() => {
+// Головне медіа зліва: фото isMain → перше фото → перше відео → Instagram (у товару може не бути фото)
+const mainMedia = computed(() => {
   const images = media.value.filter(m => m.mediaType === 'IMAGE' && m.file)
-  return images.find(m => m.isMain) ?? images[0]
+  return images.find(m => m.isMain) ?? images[0] ?? media.value.find(m => m.mediaType === 'VIDEO' && m.file) ?? media.value.find(m => m.externalUrl)
 })
 const isBarVisible = ref(false)
 useIntersectionObserver(galleryRef, ([entry]) => { isBarVisible.value = !!entry && !entry.isIntersecting && entry.boundingClientRect.top < 0 })
@@ -295,12 +297,16 @@ watch(isSizeChartOpen, async (isOpen) => {
         <div class="hidden md:block lg:col-span-full"><BBreadcrumbs :items="breadcrumbs" /></div>
 
         <!-- Головне фото (isMain) зліва, як у референсі; на мобільному його вже показує слайдер -->
-        <div v-if="mainPhoto" class="hidden lg:block">
-          <img :src="getFileUrl(mainPhoto.file, 'large')" :alt="product.name" class="sticky top-28 aspect-[3/4] w-full rounded-2xl bg-secondary-100 object-cover">
+        <div v-if="mainMedia" class="hidden lg:block">
+          <div class="sticky top-28 aspect-[3/4] w-full overflow-hidden rounded-2xl bg-secondary-100">
+            <iframe v-if="mainMedia.externalUrl" :src="getInstagramEmbedUrl(mainMedia.externalUrl) ?? undefined" class="size-full border-0" loading="lazy" :title="`${product.name} — Instagram`" />
+            <video v-else-if="mainMedia.mediaType === 'VIDEO'" :src="getFileUrl(mainMedia.file)" class="size-full object-cover" controls playsinline preload="metadata" />
+            <img v-else :src="getFileUrl(mainMedia.file, 'large')" :alt="product.name" class="size-full object-cover">
+          </div>
         </div>
 
         <!-- Інфо, а під ним вибір і покупка — одна колонка праворуч від головного фото -->
-        <div class="flex min-w-0 flex-col gap-8" :class="{ 'lg:col-span-full': !mainPhoto }">
+        <div class="flex min-w-0 flex-col gap-8" :class="{ 'lg:col-span-full': !mainMedia }">
           <div class="flex min-w-0 flex-col gap-4">
 
             <div class="flex items-start justify-between gap-4">

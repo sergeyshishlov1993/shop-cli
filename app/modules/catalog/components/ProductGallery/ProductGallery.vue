@@ -71,6 +71,11 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
   if (import.meta.client) document.body.style.overflow = ''
 })
+const toggleVideo = (event: MouseEvent) => {
+  event.stopPropagation()
+  const video = (event.currentTarget as HTMLElement).parentElement?.querySelector('video')
+  if (video) video.paused ? video.play() : video.pause()
+}
 const isFileVideo = (item: { mediaType: string, externalUrl?: string | null }) => item.mediaType === 'VIDEO' && !item.externalUrl
 </script>
 
@@ -119,6 +124,14 @@ const isFileVideo = (item: { mediaType: string, externalUrl?: string | null }) =
               :alt="`${productName} — фото ${index + 1}`"
               class="product-gallery__tile-asset"
               :style="{ objectPosition: focalPosition(item.focalX, item.focalY) }"
+            />
+            <!-- iframe і плеєр забирають події миші — прозорий шар дає тягнути стрічку.
+                 Для відео шар не перекриває панель кнопок і по кліку запускає/ставить на паузу. -->
+            <span
+              v-if="item.externalUrl || isFileVideo(item)"
+              class="product-gallery__drag-layer"
+              :class="{ 'product-gallery__drag-layer--video': isFileVideo(item) }"
+              @click="isFileVideo(item) && toggleVideo($event)"
             />
           </div>
         </div>
@@ -655,6 +668,17 @@ const isFileVideo = (item: { mediaType: string, externalUrl?: string | null }) =
 iframe.product-gallery__tile-asset,
 video.product-gallery__tile-asset {
   pointer-events: auto;
+}
+
+.product-gallery__drag-layer {
+  position: absolute;
+  inset: 0;
+}
+
+/* Лишаємо смугу з кнопками плеєра клікабельною */
+.product-gallery__drag-layer--video {
+  bottom: 56px;
+  cursor: pointer;
 }
 
 .product-gallery__arrow {
