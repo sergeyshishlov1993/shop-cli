@@ -560,7 +560,7 @@ export const adminApi = {
   updateReviewStatus(id: number, status: AdminReview['status']) { return useNuxtApp().$api(`/admin/reviews/${id}/status`, { method: 'PATCH', body: { status } }) },
   replyReview(id: number, text: string) { return useNuxtApp().$api(`/admin/reviews/${id}/reply`, { method: 'POST', body: { text } }) },
 
-  feedback(query: { status?: string, page?: number, limit?: number } = {}) { return useNuxtApp().$api<Paginated<AdminFeedback>>('/admin/feedback', { query }) },
+  feedback(query: { status?: string, page?: number, limit?: number, deletedOnly?: boolean } = {}) { return useNuxtApp().$api<Paginated<AdminFeedback>>('/admin/feedback', { query }) },
   updateFeedbackStatus(id: number, status: AdminFeedback['status']) { return useNuxtApp().$api(`/admin/feedback/${id}/status`, { method: 'PATCH', body: { status } }) },
   deleteFeedback(id: number) { return useNuxtApp().$api(`/admin/feedback/${id}`, { method: 'DELETE' }) },
   restoreFeedback(id: number) { return useNuxtApp().$api(`/admin/feedback/${id}/restore`, { method: 'PATCH' }) },
