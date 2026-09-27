@@ -99,7 +99,7 @@ await load()
   <div class="mx-auto max-w-7xl space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div><NuxtLink to="/admin/products" class="text-sm text-secondary-500 hover:text-secondary-900">← Усі товари</NuxtLink><h1 class="mt-2 text-3xl font-bold">{{ product?.name || 'Товар' }}</h1><p class="mt-1 text-sm text-secondary-500">Варіанти, залишки та вся медіагалерея.</p></div>
-      <BBtn class="max-lg:hidden" @click="openVariant()"><Icon name="lucide:plus" size="17" /> Додати варіант</BBtn>
+      <BBtn @click="openVariant()"><Icon name="lucide:plus" size="17" /> Додати варіант</BBtn>
     </div>
 
     <section class="space-y-4">
@@ -126,7 +126,8 @@ await load()
       </div>
     </section>
 
-    <BBtn class="fixed bottom-24 right-4 z-30 !size-14 !rounded-full !p-0 shadow-lg lg:hidden" aria-label="Додати" @click="openVariant()"><Icon name="lucide:plus" size="24" /></BBtn>
+    <!-- Плаваюча «+» у всіх розділах товарів — новий товар; варіант додається кнопкою в блоці «Варіанти» -->
+    <BBtn class="fixed bottom-24 right-4 z-30 !size-14 !rounded-full !p-0 shadow-lg lg:hidden" aria-label="Новий товар" to="/admin/products?create=1"><Icon name="lucide:plus" size="24" /></BBtn>
 
     <section class="space-y-4">
       <div><h2 class="text-xl font-semibold">Медіагалерея</h2><p class="text-sm text-secondary-500">Перше основне медіа показується у картці товару. Порядок можна змінювати.</p></div>

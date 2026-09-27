@@ -184,6 +184,9 @@ async function applyFilters() { page.value = 1; await loadProducts() }
 async function changePage(nextPage: number) { page.value = nextPage; await loadProducts() }
 
 await Promise.all([loadProducts(), loadCategories()])
+// Перехід із плаваючої «+» на сторінці товару: одразу відкриваємо форму нового товару
+const route = useRoute()
+if (route.query.create) { openCreate(); navigateTo({ query: {} }, { replace: true }) }
 </script>
 
 <template>
