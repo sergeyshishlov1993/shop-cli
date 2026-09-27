@@ -13,6 +13,9 @@ const variants = computed<StorefrontVariant[]>(
 () => currentProduct.value?.variants ?? [],
 )
 
+const hasColors = computed(() => variants.value.some(v => v.color))
+const hasSizes = computed(() => variants.value.some(v => v.size))
+
 const colors = computed(() => {
 const map = new Map<number, NonNullable<StorefrontVariant['color']>>()
 for (const v of variants.value) {
@@ -30,12 +33,15 @@ if (v.size && !map.has(v.size.id)) map.set(v.size.id, v.size)
 return [...map.values()]
 })
 
-const currentVariant = computed<StorefrontVariant | null>(() => {
-if (!selectedColorId.value && !selectedSizeId.value) return null
-return variants.value.find(v =>
+const matchingVariants = computed(() => variants.value.filter(v =>
 (!selectedColorId.value || v.color?.id === selectedColorId.value)
 && (!selectedSizeId.value || v.size?.id === selectedSizeId.value),
-) ?? null
+))
+
+const currentVariant = computed<StorefrontVariant | null>(() => {
+if (hasColors.value && !selectedColorId.value) return null
+if (hasSizes.value && !selectedSizeId.value) return null
+return matchingVariants.value.find(v => v.availableQty > 0) ?? null
 })
 
 const price = computed(
@@ -43,9 +49,9 @@ const price = computed(
 )
 
 const availability = computed<AvailabilityStatus>(() => {
-if (currentVariant.value) return currentVariant.value.availabilityStatus
-if (!variants.value.length) return 'OUT_OF_STOCK'
-return variants.value.some(v => v.availabilityStatus === 'IN_STOCK')
+const availableVariants = matchingVariants.value.filter(v => v.availableQty > 0)
+if (!availableVariants.length) return 'OUT_OF_STOCK'
+return availableVariants.some(v => v.availabilityStatus === 'IN_STOCK')
 ? 'IN_STOCK'
 : 'LOW_STOCK'
 })
@@ -81,6 +87,22 @@ selectedSizeId.value = null
 
 const selectSize = (id: number) => (selectedSizeId.value = id)
 
+function isColorAvailable(colorId: number) {
+return variants.value.some(v =>
+v.color?.id === colorId
+&& v.availableQty > 0
+&& (!selectedSizeId.value || v.size?.id === selectedSizeId.value),
+)
+}
+
+function isSizeAvailable(sizeId: number) {
+return variants.value.some(v =>
+v.size?.id === sizeId
+&& v.availableQty > 0
+&& (!selectedColorId.value || v.color?.id === selectedColorId.value),
+)
+}
+
 watch(
 () => toValue(slug),
 async (value) => {
@@ -93,8 +115,8 @@ if (store.currentProduct?.slug !== value || !store.relatedProducts) {
 requests.push(store.fetchRelated(value))
 }
 if (requests.length) await Promise.all(requests)
-selectedColorId.value = colors.value[0]?.id ?? null
-selectedSizeId.value = null
+ selectedSizeId.value = null
+ selectedColorId.value = colors.value.find(color => isColorAvailable(color.id))?.id ?? colors.value[0]?.id ?? null
 },
 { immediate: true },
 )
@@ -113,5 +135,7 @@ availability,
 media,
 selectColor,
 selectSize,
+isColorAvailable,
+isSizeAvailable,
 }
 }
