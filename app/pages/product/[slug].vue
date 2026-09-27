@@ -90,6 +90,10 @@ const availabilityLabel = computed(() => {
 const isSizeSheetOpen = ref(false)
 const isDescriptionOpen = ref(false)
 const galleryRef = ref<HTMLElement | null>(null)
+const mainPhoto = computed(() => {
+  const images = media.value.filter(m => m.mediaType === 'IMAGE' && m.file)
+  return images.find(m => m.isMain) ?? images[0]
+})
 const isBarVisible = ref(false)
 useIntersectionObserver(galleryRef, ([entry]) => { isBarVisible.value = !!entry && !entry.isIntersecting && entry.boundingClientRect.top < 0 })
 const askSize = () => { isSizeSheetOpen.value = true; toast.warning('Оберіть розмір') }
@@ -287,9 +291,15 @@ watch(isSizeChartOpen, async (isOpen) => {
         </div>
       </section>
 
-      <section class="store-container grid gap-8 py-6 lg:grid-cols-2 lg:gap-16 lg:py-10">
+      <section class="store-container grid gap-8 py-6 lg:gap-10 lg:py-10" :class="mainPhoto ? 'lg:grid-cols-3' : 'lg:grid-cols-2'">
+        <div class="hidden md:block lg:col-span-full"><BBreadcrumbs :items="breadcrumbs" /></div>
+
+        <!-- Головне фото (isMain) зліва, як у референсі; на мобільному його вже показує слайдер -->
+        <div v-if="mainPhoto" class="hidden lg:block">
+          <img :src="getFileUrl(mainPhoto.file, 'large')" :alt="product.name" class="sticky top-28 aspect-[3/4] w-full rounded-2xl bg-secondary-100 object-cover">
+        </div>
+
         <div class="flex min-w-0 flex-col gap-4">
-          <BBreadcrumbs class="hidden md:flex" :items="breadcrumbs" />
 
           <div class="flex items-start justify-between gap-4">
             <h1 class="store-title text-2xl md:text-4xl">{{ product.name }}</h1>
