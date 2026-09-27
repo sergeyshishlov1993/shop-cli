@@ -61,14 +61,6 @@ watch(() => route.fullPath, close)
           :item="item"
       />
 
-      <section v-if="visibleRecommended.length" class="mt-4 border-t border-secondary-200 pt-4">
-        <h3 class="mb-3 text-sm font-medium uppercase tracking-[0.12em] text-secondary-900">Вам може сподобатися</h3>
-        <div v-drag-scroll class="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none]">
-          <div v-for="item in visibleRecommended" :key="item.id" class="w-36 shrink-0">
-            <ProductCard :product="item" compact />
-          </div>
-        </div>
-      </section>
     </div>
 
     <template v-if="!cartStore.isEmpty" #footer>
@@ -88,6 +80,16 @@ watch(() => route.fullPath, close)
           Оформити замовлення
         </BBtn>
         <BBtn variant="outline" block to="/cart" @click="close">Переглянути кошик</BBtn>
+
+        <!-- Рекомендації закріплені внизу шторки — видно завжди, без прокрутки списку товарів -->
+        <section v-if="visibleRecommended.length" class="-mx-5 mt-1 border-t border-secondary-200 px-5 pt-3">
+          <h3 class="mb-3 text-sm font-medium uppercase tracking-[0.12em] text-secondary-900">Вам може сподобатися</h3>
+          <div v-drag-scroll class="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none]">
+            <div v-for="item in visibleRecommended" :key="item.id" class="w-32 shrink-0">
+              <ProductCard :product="item" compact />
+            </div>
+          </div>
+        </section>
       </div>
     </template>
   </BDrawer>
