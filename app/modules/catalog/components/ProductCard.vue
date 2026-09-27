@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useCatalogStore } from '~/modules/catalog/catalogStore'
+import { catalogApi } from '~/modules/catalog/catalogApi'
 import { useCartStore } from '~/modules/cart/cartStore'
 import { useAuthStore } from '~/modules/auth/authStore'
 import { useFavoritesStore } from '~/modules/favorites/favoritesStore'
@@ -13,7 +13,6 @@ const props = withDefaults(defineProps<Props>(), {
   compact: false,
 })
 
-const catalogStore = useCatalogStore()
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 const favoritesStore = useFavoritesStore()
@@ -30,7 +29,8 @@ const selectedColor = ref<number | null>(null)
 const selectedSizeName = ref<string | null>(null)
 const isFavorite = computed(() => favoritesStore.isFavorite(props.product.id))
 
-const productDetail = computed(() => catalogStore.currentProduct)
+// Локально, а не в catalogStore.currentProduct: інакше швидке додавання з рейки підміняє товар сторінки
+const productDetail = ref<ProductDetail | null>(null)
 const variants = computed(() => productDetail.value?.variants ?? [])
 
 const colors = computed(() => {
@@ -105,7 +105,7 @@ async function openQuickAdd() {
   isAdded.value = false
   loadingVariants.value = true
   try {
-    await catalogStore.fetchProductBySlug(props.product.slug)
+    productDetail.value = await catalogApi.getProductBySlug(props.product.slug)
 
     if (colors.value[0]) selectedColor.value = colors.value[0].id
 

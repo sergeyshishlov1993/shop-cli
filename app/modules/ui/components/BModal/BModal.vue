@@ -8,6 +8,8 @@ interface Props {
   fullscreen?: boolean
   /** Без шапки: заголовок і × рендерить сам вміст */
   headless?: boolean
+  /** Поверх шторок і інших модалок (діалог підтвердження) */
+  onTop?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -17,6 +19,7 @@ const props = withDefaults(defineProps<Props>(), {
   closable: true,
   fullscreen: false,
   headless: false,
+  onTop: false,
 })
 
 const emit = defineEmits<{
@@ -60,7 +63,8 @@ onBeforeUnmount(() => {
     <Transition name="b-fade">
       <div
         v-if="modelValue"
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        class="fixed inset-0 flex items-center justify-center p-4"
+        :class="onTop ? 'z-[150]' : 'z-[100]'"
         role="dialog"
         aria-modal="true"
       >

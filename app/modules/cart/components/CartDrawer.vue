@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { useCartStore } from '~/modules/cart/cartStore'
 import CartItem from '~/modules/cart/components/CartItem.vue'
+import { catalogApi } from '~/modules/catalog/catalogApi'
+import ProductCard from '~/modules/catalog/components/ProductCard.vue'
 
 interface Props {
   modelValue: boolean
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
@@ -15,6 +17,22 @@ const emit = defineEmits<{
 const cartStore = useCartStore()
 
 const close = () => emit('update:modelValue', false)
+
+// Рекомендації як у Gepur: «з цим купують» + схожі до останнього доданого товару, добиваємо хітами; без того, що вже в кошику
+const recommended = ref<ProductListItem[]>([])
+watch(() => props.modelValue, async (open) => {
+  const items = cartStore.cart?.items
+  if (!open || !items?.length) return
+  const inCart = new Set(items.map(item => item.product.id))
+  const related = await catalogApi.getRelatedProducts(items.at(-1)!.product.slug).catch(() => null)
+  const list = [...(related?.boughtTogether ?? []), ...(related?.similar ?? [])]
+  if (list.length < 6) list.push(...(await catalogApi.getProducts({ isHit: true, limit: 8 }).catch(() => null))?.items ?? [])
+  recommended.value = [...new Map(list.filter(p => !inCart.has(p.id)).map(p => [p.id, p])).values()].slice(0, 8)
+})
+
+// Перехід на товар з рекомендацій — шторку закриваємо
+const route = useRoute()
+watch(() => route.fullPath, close)
 </script>
 
 <template>
@@ -39,6 +57,15 @@ const close = () => emit('update:modelValue', false)
           :key="item.id"
           :item="item"
       />
+
+      <section v-if="recommended.length" class="mt-4 border-t border-secondary-200 pt-4">
+        <h3 class="mb-3 text-sm font-medium uppercase tracking-[0.12em] text-secondary-900">Вам може сподобатися</h3>
+        <div v-drag-scroll class="-mx-5 flex gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none]">
+          <div v-for="item in recommended" :key="item.id" class="w-36 shrink-0">
+            <ProductCard :product="item" compact />
+          </div>
+        </div>
+      </section>
     </div>
 
     <template v-if="!cartStore.isEmpty" #footer>

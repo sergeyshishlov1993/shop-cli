@@ -24,6 +24,7 @@ const icon = computed(() => icons[state.value.options.variant ?? 'primary'])
     v-model="isOpen"
     :title="state.options.title"
     size="sm"
+    on-top
   >
     <div class="flex items-start gap-3">
       <div
