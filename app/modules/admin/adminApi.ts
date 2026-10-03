@@ -620,6 +620,19 @@ export const adminApi = {
     if (mapping.stockQty !== undefined) fd.append('stockQty', String(mapping.stockQty))
     return useNuxtApp().$api<{ updated: number, notFoundCount: number, notFound: string[] }>('/admin/import/stock', { method: 'POST', body: fd })
   },
+  importProducts(file: File, mapping: Record<string, number | undefined>) {
+    const fd = new FormData()
+    fd.append('file', file)
+    for (const [key, value] of Object.entries(mapping)) {
+      if (value !== undefined) fd.append(key, String(value))
+    }
+    return useNuxtApp().$api<{ created: number, updated: number, errors: string[] }>('/admin/import/products', { method: 'POST', body: fd })
+  },
+  importPhotos(files: File[]) {
+    const fd = new FormData()
+    for (const f of files) fd.append('files', f)
+    return useNuxtApp().$api<{ attached: number, notFound: string[], errors: string[] }>('/admin/import/photos', { method: 'POST', body: fd })
+  },
   importYml(file: File) {
     const fd = new FormData()
     fd.append('file', file)

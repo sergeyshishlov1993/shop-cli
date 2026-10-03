@@ -123,6 +123,8 @@ const isFileVideo = (item: { mediaType: string, externalUrl?: string | null }) =
             <img
               v-else
               :src="getFileUrl(item.file, 'large')"
+              :srcset="getFileSrcset(item.file)"
+              sizes="(min-width: 1024px) 33vw, 100vw"
               :alt="`${productName} — фото ${index + 1}`"
               class="product-gallery__tile-asset"
               :style="{ objectPosition: focalPosition(item.focalX, item.focalY) }"
@@ -204,6 +206,8 @@ const isFileVideo = (item: { mediaType: string, externalUrl?: string | null }) =
             <img
               v-else
               :src="getFileUrl(item.file, 'large')"
+              :srcset="getFileSrcset(item.file)"
+              sizes="(min-width: 1024px) 50vw, 100vw"
               :alt="`${productName} — фото ${index + 1}`"
               class="product-gallery__asset"
               :style="{ objectPosition: focalPosition(item.focalX, item.focalY) }"

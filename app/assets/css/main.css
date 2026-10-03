@@ -970,3 +970,22 @@
 :root[data-theme="dark"] .hover\:bg-secondary-900.hover\:text-white:hover {
     color: var(--color-secondary-50);
 }
+
+/* Перехід між розділами адмінки: контент іде в блюр і проявляється */
+.admin-blur-enter-active,
+.admin-blur-leave-active {
+    transition: opacity 0.18s ease, filter 0.18s ease;
+}
+
+.admin-blur-enter-from,
+.admin-blur-leave-to {
+    opacity: 0;
+    filter: blur(8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-blur-enter-active,
+    .admin-blur-leave-active {
+        transition: none;
+    }
+}

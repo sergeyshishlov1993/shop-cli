@@ -64,7 +64,8 @@ onMounted(() => {
   >
     <div class="flex flex-col h-full">
       <div class="flex-1 overflow-y-auto px-4 pb-4">
-        <BAccordion :items="accordionItems" :multiple="false">
+        <!-- Верхню лінію вже дає шапка шухляди, нижньої акордеона достатньо як роздільника -->
+        <BAccordion class="!border-t-0" :items="accordionItems" :multiple="false">
           <template #item="{ item, isOpen }">
             <div v-if="item.key === 'categories' && isOpen" class="space-y-1 pb-2">
               <button
@@ -80,7 +81,7 @@ onMounted(() => {
           </template>
         </BAccordion>
 
-        <nav class="mt-2 flex flex-col gap-0.5 border-t border-secondary-200 pt-3">
+        <nav class="mt-2 flex flex-col gap-0.5 pt-1">
           <button
             v-if="isAuthenticated"
             type="button"

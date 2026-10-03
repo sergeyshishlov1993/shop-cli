@@ -63,6 +63,15 @@ export function getFileUrl(file: FileKeys | null | undefined, size: FileSize = '
   return `${base}/${finalKey.replace(/^\//, '')}`
 }
 
+// srcset із WebP-розмірів, які робить бекенд (thumb 200w / medium 600w / large 1200w):
+// браузер сам обирає файл за шириною слота (sizes) і щільністю екрана
+export function getFileSrcset(file: FileKeys | null | undefined): string | undefined {
+  if (!file) return undefined
+  const sizes = [['thumb', file.s3KeyThumb, 200], ['medium', file.s3KeyMedium, 600], ['large', file.s3KeyLarge, 1200]] as const
+  const parts = sizes.filter(([, key]) => key).map(([size, , width]) => `${getFileUrl(file, size)} ${width}w`)
+  return parts.length ? parts.join(', ') : undefined
+}
+
 /** Instagram post/reel URL → embed iframe URL (null якщо не Instagram) */
 export function getInstagramEmbedUrl(url: string | null | undefined): string | null {
   const match = url?.match(/instagram\.com\/(p|reels?|tv)\/([\w-]+)/)

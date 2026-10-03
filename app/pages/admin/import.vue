@@ -31,6 +31,89 @@ async function doYml() {
   }
 }
 
+// Режим: оновити ціни/залишки наявних варіантів або створити/оновити товари з таблиці
+const mode = ref<'stock' | 'products'>('stock')
+const modeOptions = [
+  { label: 'Оновити ціни / залишки', value: 'stock' },
+  { label: 'Товари: створити / оновити', value: 'products' },
+]
+
+// Поля імпорту товарів; порядок важливий для автопідбору (стара ціна раніше за ціну)
+const productFields = [
+  { key: 'sku', label: 'SKU / артикул', required: true, re: /sku|артикул|код/ },
+  { key: 'name', label: 'Назва', required: true, re: /name|назв|наймен|товар/ },
+  { key: 'category', label: 'Категорія (Жінкам > Сукні)', re: /categ|катег|розділ|раздел/ },
+  { key: 'oldPrice', label: 'Стара ціна', re: /old|стара|старая/ },
+  { key: 'price', label: 'Ціна', re: /price|ціна|цена/ },
+  { key: 'stockQty', label: 'Залишок', re: /stock|залиш|остат|кільк|колич|qty/ },
+  { key: 'size', label: 'Розмір', re: /size|розмір|размер/ },
+  { key: 'color', label: 'Колір', re: /colou?r|колір|цвет/ },
+  { key: 'brand', label: 'Бренд', re: /brand|бренд|vendor|виробн/ },
+  { key: 'description', label: 'Опис', re: /desc|опис/ },
+  { key: 'group', label: 'Модель (обʼєднує варіанти)', re: /group|модел|model/ },
+  { key: 'pictures', label: 'Посилання на фото', re: /photo|фото|image|picture|картин/ },
+] as const
+const pmap = reactive<Record<string, number>>(Object.fromEntries(productFields.map(f => [f.key, -1])))
+const productsReport = ref<{ created: number, updated: number, errors: string[] } | null>(null)
+
+function guessProductMapping(headers: string[]) {
+  headers.forEach((h, i) => {
+    const s = h.trim().toLowerCase()
+    const field = productFields.find(f => pmap[f.key] === -1 && f.re.test(s))
+    if (field) pmap[field.key] = i
+  })
+}
+
+async function doRunProducts() {
+  if (!file.value) return
+  if (pmap.sku === -1 || pmap.name === -1) {
+    toast.error('Оберіть колонки SKU та назви')
+    return
+  }
+  running.value = true
+  productsReport.value = null
+  try {
+    productsReport.value = await adminApi.importProducts(file.value, Object.fromEntries(
+      Object.entries(pmap).map(([k, v]) => [k, v === -1 ? undefined : v]),
+    ))
+    toast.success(`Створено: ${productsReport.value.created}, оновлено: ${productsReport.value.updated}`)
+  }
+  catch (e) {
+    toast.error(getAdminError(e))
+  }
+  finally {
+    running.value = false
+  }
+}
+
+// Фото пачкою: імʼя файлу = SKU. Шлемо частинами, щоб не тримати сотні МБ в одному запиті.
+const photoFiles = shallowRef<File[]>([])
+const photosRunning = ref(false)
+const photosReport = ref<{ attached: number, notFound: string[], errors: string[] } | null>(null)
+
+async function doPhotos() {
+  if (!photoFiles.value.length) return
+  photosRunning.value = true
+  const total = { attached: 0, notFound: [] as string[], errors: [] as string[] }
+  photosReport.value = null
+  try {
+    for (let i = 0; i < photoFiles.value.length; i += 20) {
+      const res = await adminApi.importPhotos(photoFiles.value.slice(i, i + 20))
+      total.attached += res.attached
+      total.notFound.push(...res.notFound)
+      total.errors.push(...res.errors)
+    }
+    toast.success(`Додано фото: ${total.attached}`)
+  }
+  catch (e) {
+    toast.error(getAdminError(e))
+  }
+  finally {
+    photosReport.value = total
+    photosRunning.value = false
+  }
+}
+
 // Индексы колонок (-1 = не выбрано)
 const map = reactive({ sku: -1, price: -1, stockQty: -1 })
 const col = (i: number) => (i === -1 ? '' : i)
@@ -60,8 +143,11 @@ async function doPreview() {
   try {
     preview.value = await adminApi.importPreview(file.value)
     Object.assign(map, { sku: -1, price: -1, stockQty: -1 })
+    for (const f of productFields) pmap[f.key] = -1
+    productsReport.value = null
     reset()
     guessMapping(preview.value.headers)
+    guessProductMapping(preview.value.headers)
   }
   catch (e) {
     toast.error(getAdminError(e))
@@ -94,8 +180,11 @@ async function doRun() {
 
 <template>
   <div class="p-4">
-    <h1 class="mb-1 text-xl font-semibold">Імпорт залишків / цін</h1>
-    <p class="mb-4 text-sm text-secondary-500">CSV або XLSX з колонкою SKU. Оновлює наявні варіанти за артикулом (ціна та/або залишок).</p>
+    <h1 class="mb-1 text-xl font-semibold">Імпорт з таблиці</h1>
+    <p class="mb-4 text-sm text-secondary-500">
+      CSV або XLSX (Google Таблиці: Файл → Завантажити; 1С / Excel — будь-яка вивантажка з колонкою артикулу).
+      Можна оновити ціни й залишки наявних товарів або завести нові товари з варіантами.
+    </p>
 
     <div class="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-end">
       <BFile v-model="file" label="CSV / XLSX" accept=".csv,text/csv,.xlsx" class="w-full sm:w-auto" />
@@ -105,7 +194,20 @@ async function doRun() {
     <div v-if="preview" class="space-y-4">
       <p class="text-sm text-secondary-600">Рядків з даними: {{ preview.totalRows }}</p>
 
-      <div class="grid gap-3 sm:grid-cols-3">
+      <BSelect v-model="mode" label="Що робимо" class="sm:w-80" :options="modeOptions" />
+
+      <div v-if="mode === 'products'" class="grid gap-3 sm:grid-cols-3">
+        <BSelect
+          v-for="f in productFields"
+          :key="f.key"
+          v-model.number="pmap[f.key]"
+          :label="f.label"
+          :required="'required' in f"
+          :options="columnOptions"
+        />
+      </div>
+
+      <div v-else class="grid gap-3 sm:grid-cols-3">
         <BSelect v-model.number="map.sku" label="Колонка SKU" required :error="errors.sku" :options="columnOptions" />
         <BSelect v-model.number="map.price" label="Колонка ціни" :error="errors.price" :options="columnOptions" />
         <BSelect v-model.number="map.stockQty" label="Колонка залишку" :options="columnOptions" />
@@ -124,7 +226,14 @@ async function doRun() {
         </table>
       </div>
 
-      <BBtn :loading="running" @click="doRun">Запустити імпорт</BBtn>
+      <BBtn :loading="running" @click="mode === 'products' ? doRunProducts() : doRun()">Запустити імпорт</BBtn>
+    </div>
+
+    <div v-if="productsReport" class="mt-6 rounded-xl border border-secondary-200 p-4 text-sm">
+      <p class="font-medium text-green-700">Створено варіантів: {{ productsReport.created }}, оновлено: {{ productsReport.updated }}</p>
+      <ul v-if="productsReport.errors.length" class="mt-2 list-disc pl-5 text-amber-700">
+        <li v-for="(err, i) in productsReport.errors" :key="i">{{ err }}</li>
+      </ul>
     </div>
 
     <div v-if="report" class="mt-6 rounded-xl border border-secondary-200 p-4 text-sm">
@@ -133,6 +242,32 @@ async function doRun() {
         Не знайдено за SKU: {{ report.notFoundCount }}
         <span v-if="report.notFound.length" class="text-secondary-500">({{ report.notFound.join(', ') }})</span>
       </p>
+    </div>
+
+    <h2 class="mb-1 mt-10 text-lg font-semibold">Фото до товарів за SKU</h2>
+    <p class="mb-4 text-sm text-secondary-500">
+      Назва файлу = артикул варіанта: <code>D-1-S.jpg</code>, друге фото — <code>D-1-S_2.jpg</code>.
+      Фото додаються в кінець галереї товару; перше фото товару без медіа стає головним.
+    </p>
+    <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-end">
+      <label class="block text-sm">
+        <span class="mb-1 block font-medium text-gray-700">Фото (JPG / PNG / WebP, до 10 МБ)</span>
+        <input
+          type="file"
+          multiple
+          accept="image/jpeg,image/png,image/webp"
+          class="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-secondary-100 file:px-3 file:py-2"
+          @change="photoFiles = [...(($event.target as HTMLInputElement).files ?? [])]"
+        >
+      </label>
+      <BBtn :loading="photosRunning" :disabled="!photoFiles.length" @click="doPhotos">Завантажити {{ photoFiles.length || '' }}</BBtn>
+    </div>
+    <div v-if="photosReport" class="mt-4 rounded-xl border border-secondary-200 p-4 text-sm">
+      <p class="font-medium text-green-700">Додано фото: {{ photosReport.attached }}</p>
+      <p v-if="photosReport.notFound.length" class="mt-1 text-amber-700">Не знайдено SKU: {{ photosReport.notFound.join(', ') }}</p>
+      <ul v-if="photosReport.errors.length" class="mt-2 list-disc pl-5 text-amber-700">
+        <li v-for="(err, i) in photosReport.errors" :key="i">{{ err }}</li>
+      </ul>
     </div>
 
     <h2 class="mb-1 mt-10 text-lg font-semibold">Імпорт товарів з YML</h2>

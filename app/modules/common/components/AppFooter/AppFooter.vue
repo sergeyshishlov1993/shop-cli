@@ -100,11 +100,11 @@ const contacts = computed(() => {
 })
 
 const socialIconMap: Record<string, string> = {
-  instagram: 'lucide:instagram',
-  facebook: 'lucide:facebook',
-  youtube: 'lucide:youtube',
+  instagram: 'mdi:instagram',
+  facebook: 'mdi:facebook',
+  youtube: 'mdi:youtube',
   tiktok: 'lucide:music-2',
-  telegram: 'lucide:send',
+  telegram: 'mdi:telegram',
 }
 
 const socialLinks = computed(() => {
@@ -149,7 +149,7 @@ await useAsyncData('footer-data', async () => {
             <p v-else-if="nlState === 'done'" class="text-sm text-gray-700">
               Ви вже підписані. Дякуємо!
             </p>
-            <form novalidate v-else class="flex gap-2" @submit.prevent="subscribeNewsletter">
+            <form novalidate v-else class="flex flex-col gap-2 sm:flex-row" @submit.prevent="subscribeNewsletter">
               <BInput
                 v-model="nlEmail"
                 type="email"
@@ -161,6 +161,7 @@ await useAsyncData('footer-data', async () => {
               />
               <BBtn
                 type="submit"
+                class="w-full sm:w-auto"
                 :loading="nlLoading"
               >
                 Підписатися
@@ -245,13 +246,13 @@ await useAsyncData('footer-data', async () => {
             </nav>
           </div>
 
-          <div class="space-y-3 border-t border-gray-200 pt-5">
+          <div v-if="socialLinks.length" class="space-y-3 border-t border-gray-200 pt-5">
             <h3 class="text-sm font-semibold text-gray-900">
               Соціальні мережі
             </h3>
-            <div v-if="socialLinks.length" class="flex flex-wrap gap-3">
-              <a v-for="social in socialLinks" :key="social.name" :href="social.href" class="flex h-9 w-9 items-center justify-center border border-gray-300 text-gray-800 transition" target="_blank" rel="noopener noreferrer" :aria-label="social.name">
-                <Icon :name="social.icon" class="h-4 w-4" />
+            <div class="flex flex-wrap gap-3">
+              <a v-for="social in socialLinks" :key="social.name" :href="social.href" class="flex size-10 items-center justify-center rounded-full border border-secondary-300 text-secondary-800 transition hover:border-primary-600 hover:text-primary-700" target="_blank" rel="noopener noreferrer" :aria-label="social.name">
+                <Icon :name="social.icon" size="20" />
               </a>
             </div>
           </div>

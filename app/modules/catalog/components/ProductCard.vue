@@ -41,6 +41,9 @@ const displayImage = computed(() => {
   if (isHovered.value && hoverImageUrl.value) return hoverImageUrl.value
   return mainImageUrl.value
 })
+// srcset має йти за тим самим файлом, що й src, інакше ховер-фото не підміниться
+const displaySrcset = computed(() =>
+  getFileSrcset(isHovered.value && hoverImageUrl.value ? props.product.hoverImage : props.product.mainImage))
 
 function openQuickAdd() {
   isModalOpen.value = true
@@ -73,7 +76,7 @@ onMounted(() => {
 <template>
   <div v-if="mini" class="flex h-full gap-3">
     <NuxtLink :to="`/product/${product.slug}`" class="aspect-[3/4] w-20 shrink-0 overflow-hidden rounded-md bg-secondary-100">
-      <img v-if="mainImageUrl" :src="mainImageUrl" :alt="product.name" class="size-full object-cover">
+      <img v-if="mainImageUrl" :src="mainImageUrl" :srcset="getFileSrcset(product.mainImage)" sizes="80px" :alt="product.name" class="size-full object-cover" loading="lazy" decoding="async">
     </NuxtLink>
     <div class="flex min-w-0 flex-1 flex-col gap-1 py-0.5">
       <NuxtLink :to="`/product/${product.slug}`" class="line-clamp-2 text-xs leading-snug text-secondary-800 hover:text-primary-700">{{ product.name }}</NuxtLink>
@@ -105,8 +108,12 @@ onMounted(() => {
       <img
           v-else-if="displayImage"
           :src="displayImage"
+          :srcset="displaySrcset"
+          sizes="(min-width: 1024px) 25vw, 50vw"
           :alt="product.name"
           class="h-full w-full object-cover transition-opacity duration-300"
+          loading="lazy"
+          decoding="async"
       />
       <div v-else class="flex h-full w-full items-center justify-center text-secondary-400">
         <Icon name="mdi:image-outline" size="48" />

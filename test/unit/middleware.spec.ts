@@ -24,7 +24,7 @@ registerEndpoint('/auth/refresh', {
 })
 registerEndpoint('/storefront/account/profile', () => ({ id: 1, role }))
 
-const route = { path: '/x' } as RouteLocationNormalized
+const route = { path: '/x', meta: {} } as RouteLocationNormalized
 const run = (mw: typeof authMiddleware) => mw(route, route)
 
 describe('route middleware', () => {
@@ -61,10 +61,16 @@ describe('route middleware', () => {
       expect(navigateToMock).toHaveBeenCalledWith('/login?redirect=/admin')
     })
 
-    it('non-admin user → /login?redirect=/admin', async () => {
+    it('authenticated non-admin user → 403 error page, no login redirect', async () => {
       role = 'CUSTOMER'
-      await run(adminMiddleware)
-      expect(navigateToMock).toHaveBeenCalledWith('/login?redirect=/admin')
+      await expect(run(adminMiddleware)).rejects.toMatchObject({ statusCode: 403 })
+      expect(navigateToMock).not.toHaveBeenCalled()
+    })
+
+    it('sets blur page transition for admin pages', async () => {
+      const to = { path: '/admin/orders', meta: {} } as RouteLocationNormalized
+      await adminMiddleware(to, to)
+      expect(to.meta.pageTransition).toMatchObject({ name: 'admin-blur' })
     })
   })
 })

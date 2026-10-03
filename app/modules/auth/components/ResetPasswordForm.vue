@@ -17,7 +17,7 @@ const form = reactive({
 const isLoading = ref(false)
 
 const { errors, validate, touch, applyServerErrors } = useFormValidation({
-  newPassword: [() => form.newPassword, [rules.required('Пароль обов\'язковий'), rules.minLength(6)]],
+  newPassword: [() => form.newPassword, [rules.required('Пароль обов\'язковий'), rules.minLength(8)]],
   confirmPassword: [() => form.confirmPassword, [rules.required('Підтвердіть пароль'), rules.sameAs(() => form.newPassword, 'Паролі не співпадають')]],
 })
 
@@ -66,7 +66,7 @@ async function handleSubmit() {
     <BPasswordInput
       v-model="form.newPassword"
       label="Новий пароль"
-      placeholder="Мінімум 6 символів"
+      placeholder="Мінімум 8 символів"
       :error="errors.newPassword"
       required
       @blur="touch('newPassword')"

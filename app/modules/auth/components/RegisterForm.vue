@@ -25,7 +25,7 @@ const { errors, validate, touch, applyServerErrors } = useFormValidation({
   lastName: [() => form.lastName, [rules.required('Прізвище обов\'язкове')]],
   email: [() => form.email, [rules.required('Email обов\'язковий'), rules.email()]],
   phone: [() => form.phone, [rules.required('Телефон обов\'язковий'), rules.phoneUa()]],
-  password: [() => form.password, [rules.required('Пароль обов\'язковий'), rules.minLength(6)]],
+  password: [() => form.password, [rules.required('Пароль обов\'язковий'), rules.minLength(8)]],
 })
 
 async function handleSubmit() {
@@ -100,7 +100,7 @@ async function handleSubmit() {
     <BPasswordInput
       v-model="form.password"
       label="Пароль"
-      placeholder="Мінімум 6 символів"
+      placeholder="Мінімум 8 символів"
       :error="errors.password"
       @blur="touch('password')"
       required

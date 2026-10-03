@@ -20,7 +20,7 @@ const profileV = useFormValidation({
 })
 const passwordV = useFormValidation({
   currentPassword: [() => passwordForm.currentPassword, [rules.required('Введіть поточний пароль')]],
-  newPassword: [() => passwordForm.newPassword, [rules.required('Введіть новий пароль'), rules.minLength(6)]],
+  newPassword: [() => passwordForm.newPassword, [rules.required('Введіть новий пароль'), rules.minLength(8)]],
   confirmPassword: [() => passwordForm.confirmPassword, [rules.required('Підтвердіть пароль'), rules.sameAs(() => passwordForm.newPassword, 'Паролі не збігаються')]],
 })
 

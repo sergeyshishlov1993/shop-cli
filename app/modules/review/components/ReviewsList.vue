@@ -100,11 +100,10 @@ watch([sentinelVisible, loading], () => {
   if (sentinelVisible.value && !loading.value && page.value < AUTO_PAGES) loadMore()
 })
 
-watch(
-  () => props.productId,
-  () => load(),
-  { immediate: true },
-)
+// Перша сторінка — на SSR: стан стору приходить у payload, клієнт не перезапитує.
+// Зміна товару без перезавантаження сторінки — звичайний load().
+await useAsyncData(`reviews-${props.productId}`, () => load().then(() => true))
+watch(() => props.productId, () => load())
 
 onBeforeUnmount(() => {
   reviewStore.reset()

@@ -22,6 +22,30 @@ export default defineNuxtConfig({
     // Захищені сторінки рендеримо на клієнті: refresh-cookie має Path=/api/auth і на SSR сторінки не приходить,
     // тож відновити сесію після протухання access-токена можна лише в браузері.
     routeRules: {
+        // CSP поки в Report-Only: порушення видно в консолі браузера, нічого не блокується.
+        // Після перевірки GTM/Pixel/Instagram — перейменувати заголовок на Content-Security-Policy.
+        '/**': {
+            headers: {
+                'X-Content-Type-Options': 'nosniff',
+                'X-Frame-Options': 'DENY',
+                'Referrer-Policy': 'strict-origin-when-cross-origin',
+                'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+                'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+                'Content-Security-Policy-Report-Only': [
+                    "default-src 'self'",
+                    "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net",
+                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+                    "font-src 'self' data: https://fonts.gstatic.com",
+                    "img-src 'self' data: blob: https: http://localhost:9000",
+                    "media-src 'self' blob: https: http://localhost:9000",
+                    "connect-src 'self' https: ws:",
+                    'frame-src https:',
+                    "frame-ancestors 'none'",
+                    "base-uri 'self'",
+                    "object-src 'none'",
+                ].join('; '),
+            },
+        },
         '/account': { ssr: false },
         '/account/**': { ssr: false },
         '/admin': { ssr: false },

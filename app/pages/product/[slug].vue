@@ -17,13 +17,18 @@ const router = useRouter()
 const slug = computed(() => route.params.slug as string)
 const catalogStore = useCatalogStore()
 
-await useAsyncData(`product-${slug.value}`, async () => {
+const { error: productError } = await useAsyncData(`product-${slug.value}`, async () => {
   await Promise.all([
     catalogStore.fetchProductBySlug(slug.value),
     catalogStore.fetchRelated(slug.value),
   ])
   return true
 })
+// Неіснуючий товар (404) або ліміт запитів (429) — сторінка помилки замість порожньої
+const productErrorStatus = productError.value?.statusCode
+if (productErrorStatus === 404 || productErrorStatus === 429) {
+  throw createError({ statusCode: productErrorStatus, fatal: true })
+}
 
 const {
   product,

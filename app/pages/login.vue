@@ -10,8 +10,10 @@ const router = useRouter()
 const route = useRoute()
 
 function handleSuccess() {
-  const requestedPath = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
-    ? route.query.redirect
+  const redirect = route.query.redirect
+  // Лише внутрішній шлях: //evil.com і /\evil.com браузер трактує як зовнішню адресу
+  const requestedPath = typeof redirect === 'string' && /^\/(?![/\\])/.test(redirect)
+    ? redirect
     : null
   router.push(requestedPath ?? '/account')
 }
