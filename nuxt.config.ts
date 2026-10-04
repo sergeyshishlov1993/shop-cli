@@ -67,6 +67,8 @@ export default defineNuxtConfig({
 
 
     app: {
+        // Адмінка перекриває це у middleware/admin.ts (admin-blur)
+        pageTransition: { name: 'page', mode: 'out-in' },
         head: {
             // Ставимо тему до першого рендера, щоб не було спалаху світлої сторінки.
             script: [

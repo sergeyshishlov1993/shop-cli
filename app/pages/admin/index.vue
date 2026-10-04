@@ -3,8 +3,21 @@ import { adminApi } from '~/modules/admin/adminApi'
 import AdminBarChart from '~/modules/admin/components/charts/AdminBarChart.vue'
 import AdminLineChart from '~/modules/admin/components/charts/AdminLineChart.vue'
 import AdminDonutChart from '~/modules/admin/components/charts/AdminDonutChart.vue'
+import { ADMIN_BADGE_HINTS, useAdminBadges } from '~/modules/admin/composables/useAdminBadges'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
+
+// «Потребує уваги» — ті самі лічильники, що й бейджі меню; плитка веде в розділ
+const badges = useAdminBadges()
+const returnsEnabled = useReturnsEnabled()
+const attentionTiles = computed(() => [
+  { to: '/admin/orders', label: 'Чекають підтвердження', tone: 'bg-blue-50 text-blue-700' },
+  { to: '/admin/reviews', label: 'Нових відгуків', tone: 'bg-violet-50 text-violet-700' },
+  { to: '/admin/feedback', label: 'Нових звернень', tone: 'bg-rose-50 text-rose-700' },
+  { to: '/admin/returns', label: 'Нових повернень', tone: 'bg-orange-50 text-orange-700' },
+  { to: '/admin/users', label: 'Нових користувачів', tone: 'bg-emerald-50 text-emerald-700' },
+  { to: '/admin/products', label: 'Мало на складі', tone: 'bg-amber-50 text-amber-700' },
+].filter(tile => returnsEnabled.value || tile.to !== '/admin/returns'))
 
 const { data: dashboard, pending, error, refresh } = await useAsyncData(
   'admin-dashboard',
@@ -153,10 +166,10 @@ const tile = 'rounded-xl border border-secondary-200 bg-white p-5'
           <article class="rounded-2xl border border-gray-200 bg-white p-5">
             <h2 class="font-semibold text-gray-950">Потребує уваги</h2>
             <div class="mt-4 grid grid-cols-2 gap-3">
-              <div class="rounded-xl bg-blue-50 p-4"><div class="text-2xl font-bold text-blue-700">{{ dashboard.pendingActions.newOrders }}</div><div class="text-xs text-blue-700">Нових замовлень</div></div>
-              <div class="rounded-xl bg-amber-50 p-4"><div class="text-2xl font-bold text-amber-700">{{ dashboard.pendingActions.lowStockVariants }}</div><div class="text-xs text-amber-700">Мало на складі</div></div>
-              <div class="rounded-xl bg-violet-50 p-4"><div class="text-2xl font-bold text-violet-700">{{ dashboard.pendingActions.pendingReviews }}</div><div class="text-xs text-violet-700">Відгуків на модерації</div></div>
-              <div class="rounded-xl bg-rose-50 p-4"><div class="text-2xl font-bold text-rose-700">{{ dashboard.pendingActions.newFeedback }}</div><div class="text-xs text-rose-700">Нових звернень</div></div>
+              <NuxtLink v-for="tile in attentionTiles" :key="tile.to" :to="tile.to" class="rounded-xl p-4 transition hover:brightness-95" :class="tile.tone" :title="ADMIN_BADGE_HINTS[tile.to]">
+                <div class="text-2xl font-bold">{{ badges[tile.to] ?? 0 }}</div>
+                <div class="text-xs">{{ tile.label }}</div>
+              </NuxtLink>
             </div>
           </article>
 

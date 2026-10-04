@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Мобільна навігація адмінки: нижня скляна панель (4 розділи) + «Ще» відкриває повне меню з бічної панелі.
 import AdminSidebar from '~/modules/admin/components/AdminSidebar.vue'
+import { ADMIN_BADGE_HINTS, useAdminBadges } from '~/modules/admin/composables/useAdminBadges'
 
 const route = useRoute()
 const isMoreOpen = ref(false)
@@ -23,6 +24,10 @@ const activeIndex = computed(() => {
 })
 
 watch(() => route.fullPath, () => { isMoreOpen.value = false })
+
+const badges = useAdminBadges()
+// «Ще»: крапка, якщо лічильник є в розділі, якого немає на нижній панелі
+const hasMoreBadges = computed(() => Object.entries(badges.value).some(([to, count]) => count && !tabs.some(tab => tab.to === to)))
 </script>
 
 <template>
@@ -41,7 +46,15 @@ watch(() => route.fullPath, () => { isMoreOpen.value = false })
         class="relative flex h-16 flex-col items-center justify-center gap-1 text-[11px] transition-colors"
         :class="isActive(tab) ? 'text-secondary-900 font-semibold' : 'text-secondary-600'"
     >
-      <Icon :name="tab.icon" size="22" />
+      <span class="relative">
+        <Icon :name="tab.icon" size="22" />
+        <span
+            v-if="badges[tab.to]"
+            class="absolute -right-2.5 -top-1.5 min-w-[1.125rem] rounded-full px-1 text-center text-[10px] font-bold leading-[1.125rem] text-white"
+            :class="tab.to === '/admin/products' ? 'bg-warning' : 'bg-primary-500'"
+            :title="ADMIN_BADGE_HINTS[tab.to]"
+        >{{ badges[tab.to]! > 99 ? '99+' : badges[tab.to] }}</span>
+      </span>
       {{ tab.label }}
     </NuxtLink>
     <button
@@ -50,7 +63,10 @@ watch(() => route.fullPath, () => { isMoreOpen.value = false })
         :class="{ 'text-secondary-900 font-semibold': isMoreOpen }"
         @click="isMoreOpen = true"
     >
-      <Icon name="lucide:menu" size="22" />
+      <span class="relative">
+        <Icon name="lucide:menu" size="22" />
+        <span v-if="hasMoreBadges" class="absolute -right-1 -top-0.5 size-2.5 rounded-full bg-primary-500" />
+      </span>
       Ще
     </button>
   </nav>

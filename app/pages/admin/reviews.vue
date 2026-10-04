@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { adminApi, getAdminError, type AdminReview } from '~/modules/admin/adminApi'
-import { getFileUrl } from '~/modules/common/helpers/fileUrl'
+import AdminReviewNode from '~/modules/admin/components/AdminReviewNode.vue'
 import { reviewApi } from '~/modules/review/reviewApi'
 import ReviewInlineForm from '~/modules/review/components/ReviewInlineForm.vue'
 definePageMeta({ layout: 'admin', middleware: 'admin' })
@@ -19,6 +19,19 @@ function openReply(id: number) { replyId.value = id; replyDialog.value = true }
 // Відповідь магазину — той самий ендпоінт і форма, що й на сайті (текст + медіа)
 async function reply(dto: { text: string, media: File[] }) { if (!replyId.value) return; await reviewApi.reply(replyId.value, { text: dto.text, media: dto.media }); replyDialog.value = false; await load(); toast.success('Відповідь опубліковано') }
 const byId = computed(() => new Map(reviews.value.map(r => [r.id, r])))
+// Дерево з плоского списку: відповіді — під своїм відгуком (старші зверху).
+// Відповідь, батько якої на ще не підвантаженій сторінці, тимчасово показується коренем з підписом «Відповідь на #N».
+const childrenOf = computed(() => {
+  const map = new Map<number, AdminReview[]>()
+  for (const review of reviews.value) {
+    if (!review.parentId || !byId.value.has(review.parentId)) continue
+    if (!map.has(review.parentId)) map.set(review.parentId, [])
+    map.get(review.parentId)!.push(review)
+  }
+  for (const list of map.values()) list.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  return map
+})
+const roots = computed(() => reviews.value.filter(r => !r.parentId || !byId.value.has(r.parentId)))
 await load()
 </script>
 
@@ -32,32 +45,15 @@ await load()
       <BSelect v-model="status" class="w-full sm:w-48" :options="statusOptions" @update:model-value="load" />
     </div>
 
-    <article v-for="review in reviews" :key="review.id" class="rounded-xl border border-secondary-200 bg-white p-5">
-      <div class="flex flex-wrap justify-between gap-3">
-        <div>
-          <NuxtLink :to="`/product/${review.product?.slug}#reviews`" target="_blank" class="font-bold hover:text-primary-600 hover:underline">{{ review.product?.name }}</NuxtLink>
-          <p class="text-xs text-secondary-500">{{ review.user?.email }} · {{ new Date(review.createdAt).toLocaleString('uk-UA') }}</p>
-        </div>
-        <BRating v-if="review.rating !== null" :model-value="review.rating" readonly size="sm" />
-      </div>
-      <p v-if="review.parentId" class="mt-3 border-l-2 border-secondary-200 pl-3 text-xs text-secondary-500">
-        Відповідь на #{{ review.parentId }}<template v-if="byId.get(review.parentId)">: «{{ byId.get(review.parentId)!.text }}»</template>
-      </p>
-      <p class="my-4 text-sm">{{ review.text }}</p>
-      <div v-if="review.media?.length" class="mb-4 flex flex-wrap gap-2">
-        <a v-for="m in review.media" :key="m.id" :href="getFileUrl(m.file)" target="_blank" rel="noopener" class="block size-20 overflow-hidden rounded-lg bg-secondary-100">
-          <video v-if="m.mediaType === 'VIDEO'" :src="getFileUrl(m.file)" class="size-full object-cover" muted preload="metadata" />
-          <img v-else :src="getFileUrl(m.file, 'thumb')" class="size-full object-cover" alt="">
-        </a>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <BBtn v-if="review.status === 'REJECTED'" variant="outline" size="sm" @click="setStatus(review.id, 'APPROVED')"><Icon name="lucide:eye" size="16" /> Показати</BBtn>
-        <BBtn v-else variant="outline" size="sm" @click="setStatus(review.id, 'REJECTED')"><Icon name="lucide:eye-off" size="16" /> Приховати</BBtn>
-        <BBtn variant="outline" size="sm" :disabled="review.status === 'REJECTED'" @click="openReply(review.id)"><Icon name="lucide:reply" size="16" /> Відповісти</BBtn>
-        <BBtn variant="ghost" size="sm" :to="`/product/${review.product?.slug}#reviews`" target="_blank"><Icon name="lucide:external-link" size="16" /> До товару</BBtn>
-        <BTag :variant="review.status === 'REJECTED' ? 'secondary' : 'success'" size="sm" class="ml-auto">{{ review.status === 'REJECTED' ? 'Приховано' : 'Опубліковано' }}</BTag>
-      </div>
-    </article>
+    <AdminReviewNode
+      v-for="review in roots"
+      :key="review.id"
+      :review="review"
+      :children-of="childrenOf"
+      :orphan-parent-id="review.parentId"
+      @status="setStatus"
+      @reply="openReply"
+    />
 
     <div ref="sentinel" />
     <div v-if="loading" class="flex justify-center py-4"><BSpinner /></div>

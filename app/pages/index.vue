@@ -193,7 +193,7 @@ useHead({
       </div>
     </section>
 
-    <section class="store-container hidden pt-12 md:block lg:pt-16">
+    <section v-reveal class="store-container hidden pt-12 md:block lg:pt-16">
       <div class="mb-8 text-center">
         <p class="store-eyebrow">Колекції</p>
         <h2 class="store-title mt-3 text-3xl sm:text-4xl"><NuxtLink to="/catalog" class="transition-colors hover:text-primary-700">Обирайте свій образ</NuxtLink></h2>
@@ -206,7 +206,7 @@ useHead({
       </div>
     </section>
 
-    <section class="store-container py-6 md:py-10 lg:py-14">
+    <section v-reveal class="store-container py-6 md:py-10 lg:py-14">
       <div class="mb-3 flex items-end justify-between gap-4 md:mb-6">
         <div>
           <p class="store-eyebrow">
@@ -240,7 +240,7 @@ useHead({
     </section>
 
     <template v-for="rail in categoryRails" :key="rail.id">
-      <section v-if="rail.products.length" class="store-container py-6 md:hidden">
+      <section v-reveal v-if="rail.products.length" class="store-container py-6 md:hidden">
         <h2 class="store-title mb-3 text-xl">
           <NuxtLink :to="rail.to" class="inline-flex items-center gap-1">{{ rail.title }}<Icon name="lucide:chevron-right" size="18" /></NuxtLink>
         </h2>
@@ -253,7 +253,7 @@ useHead({
       </NuxtLink>
     </template>
 
-    <section v-for="block in activePromoBlocks" :key="block.id" class="store-container py-4 max-md:px-0 lg:py-6">
+    <section v-reveal v-for="block in activePromoBlocks" :key="block.id" class="store-container py-4 max-md:px-0 lg:py-6">
       <NuxtLink :to="getPromoBlockLink(block)" class="home-promo group block">
         <img :src="getPromoImage(block)" :alt="block.title" class="focal-media" :style="block.imageFile ? focalVars(block) : undefined" />
         <span class="home-promo__overlay">
@@ -275,7 +275,7 @@ useHead({
       </div>
     </section>
 
-    <section class="store-container py-6 md:py-10 lg:py-14">
+    <section v-reveal class="store-container py-6 md:py-10 lg:py-14">
       <div class="mb-3 flex items-end justify-between gap-4 md:mb-6">
         <div>
           <p class="store-eyebrow">
@@ -308,7 +308,7 @@ useHead({
       </ProductRail>
     </section>
 
-    <section v-if="data.seasonalProducts.length" class="store-container py-6 md:py-10 lg:py-14">
+    <section v-reveal v-if="data.seasonalProducts.length" class="store-container py-6 md:py-10 lg:py-14">
       <div class="mb-6 flex items-end justify-between gap-4">
         <h2 class="store-title text-xl md:text-3xl"><NuxtLink :to="getProductSectionLink('isSeasonal')" class="group inline-flex items-center gap-1 transition-colors hover:text-primary-700">Сезонна добірка <Icon name="lucide:chevron-right" size="20" class="transition-transform group-hover:translate-x-0.5" /></NuxtLink></h2>
         <NuxtLink :to="getProductSectionLink('isSeasonal')" class="store-link hidden sm:inline-flex">Дивитися все</NuxtLink>
@@ -318,7 +318,7 @@ useHead({
       </ProductRail>
     </section>
 
-    <section class="store-container hidden py-10 md:block lg:py-14">
+    <section v-reveal class="store-container hidden py-10 md:block lg:py-14">
       <div class="grid gap-8 bg-primary-100 px-6 py-12 text-center sm:px-12 lg:py-16">
         <div>
           <p class="store-eyebrow">
@@ -335,7 +335,7 @@ useHead({
       </div>
     </section>
 
-    <InstagramSection />
+    <InstagramSection v-reveal />
   </div>
 </template>
 

@@ -29,6 +29,13 @@ const toast = useToast()
 const openMediaViewer = inject<(review: Review, mediaIndex: number) => void>('openReviewMedia', () => {})
 
 const mode = ref<'reply' | 'edit' | null>(null)
+
+// Згортання гілки відповідей: кнопка в рядку дій або клік по лінії гілки ліворуч
+const repliesOpen = ref(false)
+function countReplies(review: Review): number {
+  return review.replies?.reduce((total, reply) => total + 1 + countReplies(reply), 0) ?? 0
+}
+const repliesCount = computed(() => countReplies(props.review))
 const isOwn = computed(() => authStore.user?.id === props.review.user.id)
 
 async function onLike() {
@@ -44,6 +51,7 @@ async function onLike() {
 async function onReply(dto: { text: string; media: File[] }) {
   await reviewStore.reply(props.review.id, dto)
   mode.value = null
+  repliesOpen.value = true // щойно додана відповідь має бути видна
   toast.success('Відповідь опубліковано')
   emit('changed')
 }
@@ -108,21 +116,13 @@ const formattedDate = computed(() => new Date(props.review.createdAt).toLocaleSt
     </header>
 
     <BRating
-      v-if="review.depth === 0 && review.rating !== null && mode !== 'edit'"
+      v-if="review.depth === 0 && review.rating !== null"
       :model-value="review.rating"
       readonly
       size="sm"
     />
 
-    <ReviewInlineForm
-      v-if="mode === 'edit'"
-      :initial="review"
-      :with-rating="review.depth === 0"
-      submit-label="Зберегти"
-      :action="onEdit"
-      @cancel="mode = null"
-    />
-    <p v-else class="text-sm leading-relaxed text-secondary-700">
+    <p class="text-sm leading-relaxed text-secondary-700">
       {{ review.text }}
     </p>
 
@@ -161,6 +161,16 @@ const formattedDate = computed(() => new Date(props.review.createdAt).toLocaleSt
         <Icon name="lucide:reply" class="size-4" /> Відповісти
       </BBtn>
       <BBtn
+        v-if="repliesCount"
+        variant="ghost"
+        size="sm"
+        :aria-expanded="repliesOpen"
+        @click="repliesOpen = !repliesOpen"
+      >
+        <Icon :name="repliesOpen ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="size-4" />
+        {{ repliesOpen ? 'Згорнути' : 'Показати' }} відповіді ({{ repliesCount }})
+      </BBtn>
+      <BBtn
         variant="ghost"
         size="sm"
         class="ml-auto"
@@ -171,20 +181,39 @@ const formattedDate = computed(() => new Date(props.review.createdAt).toLocaleSt
       </BBtn>
     </div>
 
-    <ReviewInlineForm
-      v-if="mode === 'reply'"
-      submit-label="Відповісти"
-      :action="onReply"
-      @cancel="mode = null"
-    />
+    <BCollapse v-if="review.replies?.length" :open="repliesOpen" gap="0.75rem">
+      <div class="relative flex flex-col gap-3 pl-4 sm:pl-8">
+        <!-- Лінія гілки: клік згортає відповіді -->
+        <button
+          type="button"
+          class="group absolute inset-y-0 left-0 flex w-3 justify-center sm:w-5"
+          :aria-label="`Згорнути відповіді (${repliesCount})`"
+          title="Згорнути відповіді"
+          @click="repliesOpen = false"
+        >
+          <span class="h-full w-0.5 rounded-full bg-secondary-200 transition-colors group-hover:bg-secondary-500" />
+        </button>
+        <ReviewItem
+          v-for="reply in review.replies"
+          :key="reply.id"
+          :review="reply"
+          @changed="emit('changed')"
+        />
+      </div>
+    </BCollapse>
 
-    <div v-if="review.replies?.length" class="flex flex-col gap-3 pl-4 sm:pl-8">
-      <ReviewItem
-        v-for="reply in review.replies"
-        :key="reply.id"
-        :review="reply"
-        @changed="emit('changed')"
+    <!-- Відповідь і редагування — у модалці, щоб не скролити до форми всередині довгого дерева -->
+    <BModal :model-value="mode === 'reply'" title="Відповісти" @update:model-value="mode = null">
+      <ReviewInlineForm submit-label="Відповісти" :action="onReply" @cancel="mode = null" />
+    </BModal>
+    <BModal :model-value="mode === 'edit'" title="Редагувати відгук" @update:model-value="mode = null">
+      <ReviewInlineForm
+        :initial="review"
+        :with-rating="review.depth === 0"
+        submit-label="Зберегти"
+        :action="onEdit"
+        @cancel="mode = null"
       />
-    </div>
+    </BModal>
   </article>
 </template>

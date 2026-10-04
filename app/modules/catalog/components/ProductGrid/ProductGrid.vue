@@ -4,22 +4,29 @@ import ProductCard from '../ProductCard.vue'
 interface Props {
   products: ProductListItem[]
   loading?: boolean
-  page: number
-  totalPages: number
+  loadingMore?: boolean
+  hasMore?: boolean
   // Великі картки: 2 колонки на десктопі, 1 на мобільному
   large?: boolean
 }
 
-interface Emits {
-  (event: 'update:page', value: number): void
-}
-
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
+  loadingMore: false,
+  hasMore: false,
   large: false,
 })
 
-defineEmits<Emits>()
+const emit = defineEmits<{ loadMore: [] }>()
+
+// Безкінечна прокрутка: коли сторінка добігла до «маячка» під сіткою — просимо наступну порцію.
+// Перевіряємо й після кожного завантаження: маячок міг лишитись у зоні видимості.
+const sentinel = ref<HTMLElement | null>(null)
+const sentinelVisible = ref(false)
+useIntersectionObserver(sentinel, ([entry]) => { sentinelVisible.value = !!entry?.isIntersecting }, { rootMargin: '0px 0px 600px 0px' })
+watch([sentinelVisible, () => props.loadingMore, () => props.loading, () => props.products.length], () => {
+  if (sentinelVisible.value && props.hasMore && !props.loading && !props.loadingMore) emit('loadMore')
+})
 </script>
 
 <template>
@@ -61,20 +68,15 @@ defineEmits<Emits>()
           class="loading-blur catalog-grid grid gap-x-0.5 gap-y-5 -mx-4 sm:-mx-6 lg:mx-0 lg:gap-x-4 lg:gap-y-8"
           :class="[large ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4', { 'pointer-events-none': loading }]"
         >
-          <ProductCard
-            v-for="product in products"
-            :key="product.id"
-            :product="product"
-          />
+          <!-- ProductCard має кілька кореневих вузлів, тож v-reveal вішаємо на обгортку -->
+          <div v-for="(product, index) in products" :key="product.id" v-reveal="(index % 4) * 80">
+            <ProductCard :product="product" />
+          </div>
         </div>
       </div>
 
-      <div v-if="totalPages > 1" class="mt-8 flex justify-center">
-        <BPagination
-          :page="page"
-          :total-pages="totalPages"
-          @update:page="$emit('update:page', $event)"
-        />
+      <div ref="sentinel" class="mt-8 flex min-h-10 justify-center">
+        <BSpinner v-if="loadingMore" />
       </div>
     </template>
 

@@ -399,6 +399,26 @@
     transform: translateY(0.75rem);
 }
 
+/* BCollapse: висота 0fr → 1fr (анімується без вимірювання вмісту) */
+.b-collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+    margin-top: calc(var(--b-collapse-gap, 0px) * -1);
+    opacity: 0;
+    transition: grid-template-rows 0.3s ease, margin-top 0.3s ease, opacity 0.25s ease;
+}
+
+.b-collapse[data-open="true"] {
+    grid-template-rows: 1fr;
+    margin-top: 0;
+    opacity: 1;
+}
+
+.b-collapse > div {
+    min-height: 0;
+    overflow: hidden;
+}
+
 @keyframes b-spin {
     to {
         transform: rotate(360deg);

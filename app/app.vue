@@ -101,6 +101,7 @@ useHead(() => ({
         <NuxtPage />
       </NuxtLayout>
     </div>
+    <PageProgress />
     <BToast />
     <BConfirmDialog />
     <CookieConsent />

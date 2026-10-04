@@ -344,7 +344,8 @@ watch(isSizeChartOpen, async (isOpen) => {
     </div>
 
     <template v-else-if="product">
-      <section ref="galleryRef">
+      <!-- Одне фото: на десктопі стрічка лише дублює головне фото зліва, ховаємо; на мобільному вона потрібна -->
+      <section ref="galleryRef" :class="{ 'lg:hidden': media.length === 1 }">
         <ProductGallery v-if="media.length" :media="media" :product-name="product.name" editorial />
         <div v-else class="flex aspect-[3/4] w-full items-center justify-center bg-secondary-100 text-secondary-400 lg:aspect-[3/1]">
           <Icon name="mdi:image-outline" size="64" />

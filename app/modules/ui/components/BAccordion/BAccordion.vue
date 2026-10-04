@@ -63,7 +63,7 @@ function toggle(key: string | number) {
         />
       </button>
 
-      <div v-show="isOpen(item.key)" class="text-sm text-secondary-600">
+      <BCollapse :open="isOpen(item.key)" class="text-sm text-secondary-600">
         <slot
           name="item"
           :item="item"
@@ -73,7 +73,7 @@ function toggle(key: string | number) {
             <slot>{{ item.content }}</slot>
           </div>
         </slot>
-      </div>
+      </BCollapse>
     </div>
   </div>
 </template>

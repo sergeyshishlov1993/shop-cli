@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { adminApi, getAdminError, type AdminOrder, type AdminOrderStatus, type AdminTrackingInfo } from '~/modules/admin/adminApi'
 import AdminDialog from '~/modules/admin/components/AdminDialog.vue'
+import NpTimeline from '~/modules/order/components/NpTimeline.vue'
 import { useToast } from '~/modules/ui/composables/useToast'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
@@ -145,11 +146,11 @@ await loadOrders()
               <td class="px-5 py-4 text-secondary-600" data-label="Дата">{{ new Date(order.createdAt).toLocaleString('uk-UA') }}</td>
               <td class="px-5 py-4 font-semibold" data-label="Сума">{{ formatPrice(order.totalAmount) }}</td>
               <td class="px-5 py-4" data-label="Статус / наступна дія">
-                <div class="flex items-center gap-3">
+                <div class="ml-auto flex flex-wrap items-center justify-end gap-2">
                   <span class="rounded-full px-2.5 py-1 text-xs font-medium" :class="colors[order.status]">{{ labels[order.status] }}</span>
                   <BSelect
                     v-if="transitions[order.status].length"
-                    class="w-40"
+                    class="w-40 max-w-full"
                     :model-value="order.status"
                     :options="transitionOptions(order)"
                     @update:model-value="value => changeStatus(order, value as AdminOrderStatus)"
@@ -178,7 +179,7 @@ await loadOrders()
           <div><div class="mb-2 flex items-center justify-between"><h3 class="font-semibold">Позиції</h3><span class="text-xs text-secondary-500">{{selectedOrder.items?.length||0}} позицій</span></div><div class="overflow-hidden rounded-xl border border-secondary-200"><div v-for="item in selectedOrder.items" :key="item.id" class="grid gap-3 border-b border-secondary-100 p-4 text-sm last:border-0 sm:grid-cols-[1fr_auto]"><div><p class="font-semibold text-secondary-900">{{item.productName}}</p><p class="mt-1 text-xs text-secondary-500">{{item.sku}} · {{item.sizeName||'Без розміру'}} · {{item.colorName||'Без кольору'}}</p><p class="mt-1 text-xs text-secondary-500">{{formatPrice(item.salePrice)}} × {{item.quantity}} шт.</p></div><div class="text-right"><p class="font-semibold">{{formatPrice(item.lineRevenue)}}</p><p class="mt-1 text-xs text-secondary-500">Собівартість {{formatPrice(item.lineCost)}}</p><p class="text-xs text-emerald-700">Прибуток {{formatPrice(item.lineProfit)}}</p></div></div></div></div>
         </div>
         <form class="space-y-4" @submit.prevent="saveOrder">
-          <div class="rounded-xl border border-secondary-200 p-4"><h3 class="mb-3 font-semibold">Доставка Новою поштою</h3><BInput v-model="orderForm.trackingNumber" label="Номер ТТН" placeholder="Введіть номер накладної"/><div class="mt-3 flex flex-wrap gap-2"><BBtn type="button" variant="outline" :disabled="!orderForm.trackingNumber.trim()" :loading="trackingLoading" @click="loadTracking">Зберегти ТТН і перевірити</BBtn><BBtn v-if="!orderForm.trackingNumber.trim()" type="button" :loading="ttnLoading" @click="createTtn">Створити ТТН</BBtn></div><div v-if="tracking" class="mt-4 rounded-xl bg-violet-50 p-4"><div class="flex items-start gap-3"><Icon name="lucide:truck" class="mt-0.5 text-violet-700"/><div><p class="font-semibold text-violet-950">{{tracking.statusDescription}}</p><p class="mt-1 text-xs text-violet-700">ТТН {{tracking.ttn}} · код НП {{tracking.statusCode}}</p><p v-if="tracking.statusChanged" class="mt-2 text-xs font-medium text-emerald-700">Статус замовлення оновлено автоматично</p></div></div></div></div>
+          <div class="rounded-xl border border-secondary-200 p-4"><h3 class="mb-3 font-semibold">Доставка Новою поштою</h3><BInput v-model="orderForm.trackingNumber" label="Номер ТТН" placeholder="Введіть номер накладної"/><div class="mt-3 flex flex-wrap gap-2"><BBtn type="button" variant="outline" :disabled="!orderForm.trackingNumber.trim()" :loading="trackingLoading" @click="loadTracking">Зберегти ТТН і перевірити</BBtn><BBtn v-if="!orderForm.trackingNumber.trim()" type="button" :loading="ttnLoading" @click="createTtn">Створити ТТН</BBtn></div><div v-if="tracking" class="mt-4 rounded-xl bg-secondary-50 p-4"><NpTimeline v-bind="tracking" /><p class="mt-2 text-xs text-secondary-500">ТТН {{tracking.ttn}} · код НП {{tracking.statusCode}}</p><p v-if="tracking.statusChanged" class="mt-2 text-xs font-medium text-emerald-700">Статус замовлення оновлено автоматично</p></div></div>
           <BTextarea v-model="orderForm.internalComment" label="Внутрішній коментар" :rows="5"/>
           <div class="flex justify-end"><BBtn type="submit">Зберегти замовлення</BBtn></div>
         </form>

@@ -149,19 +149,19 @@ await useAsyncData('footer-data', async () => {
             <p v-else-if="nlState === 'done'" class="text-sm text-gray-700">
               Ви вже підписані. Дякуємо!
             </p>
-            <form novalidate v-else class="flex flex-col gap-2 sm:flex-row" @submit.prevent="subscribeNewsletter">
+            <form novalidate v-else class="flex flex-col gap-2" @submit.prevent="subscribeNewsletter">
               <BInput
                 v-model="nlEmail"
                 type="email"
                 required
                 placeholder="Email для новин та акцій"
-                class="min-w-0 flex-1"
+                class="min-w-0"
                 :error="nlV.errors.email"
                 @blur="nlV.touch('email')"
               />
               <BBtn
                 type="submit"
-                class="w-full sm:w-auto"
+                class="w-full"
                 :loading="nlLoading"
               >
                 Підписатися

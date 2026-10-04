@@ -7,7 +7,8 @@ const toast = useToast(); const items = ref<AdminFeedback[]>([]); const status =
 const statusOptions = [{ label: 'Усі', value: '' }, { label: 'Нові', value: 'NEW' }, { label: 'В роботі', value: 'IN_PROGRESS' }, { label: 'Завершені', value: 'DONE' }]
 async function load() { try { const r = await adminApi.feedback({ status: status.value || undefined, limit: 100, deletedOnly: deletedOnly.value }); items.value = r.items } catch (e) { toast.error(getAdminError(e)) } }
 async function toggleDeleted() { deletedOnly.value = !deletedOnly.value; status.value = ''; await load() }
-async function update(item: AdminFeedback, next: AdminFeedback['status']) { try { await adminApi.updateFeedbackStatus(item.id, next); await load() } catch (e) { toast.error(getAdminError(e)) } }
+const badgesTick = useState('admin-badges-tick', () => 0)
+async function update(item: AdminFeedback, next: AdminFeedback['status']) { try { await adminApi.updateFeedbackStatus(item.id, next); badgesTick.value++; await load() } catch (e) { toast.error(getAdminError(e)) } }
 async function remove(item: AdminFeedback) { if (!(await confirmDialog({ title: 'Приховати звернення?', message: 'Звернення можна буде відновити зі списку прихованих.', variant: 'danger', confirmText: 'Приховати' }))) return; await adminApi.deleteFeedback(item.id); await load() }
 async function restore(item: AdminFeedback) { try { await adminApi.restoreFeedback(item.id); await load(); toast.success('Звернення відновлено') } catch (e) { toast.error(getAdminError(e)) } }
 await load()

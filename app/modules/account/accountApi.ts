@@ -39,6 +39,12 @@ interface AccountTrackingInfo {
   ttn: string
   statusCode: string
   statusDescription: string
+  citySender?: string
+  cityRecipient?: string
+  warehouseRecipient?: string
+  dateCreated?: string
+  scheduledDeliveryDate?: string
+  actualDeliveryDate?: string
   orderStatus?: OrderStatus
   statusChanged?: boolean
 }

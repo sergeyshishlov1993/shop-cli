@@ -259,6 +259,15 @@ export interface ReportCategory { categoryId: number | null, categoryName: strin
 export interface ReportProduct { productId: number | null, productName: string, sku: string, revenue: number, cost: number, grossProfit: number, itemsSold: number, marginPercent: number }
 export interface ReportExpenseCategory { category: string, totalAmount: number, count: number }
 
+export interface AdminCounters {
+  newOrders: number
+  newReviews: number
+  newFeedback: number
+  newReturns: number
+  newUsers: number
+  lowStockVariants: number
+}
+
 export interface AdminDashboard {
   today: PeriodMetrics
   week: PeriodMetrics
@@ -328,6 +337,12 @@ export interface AdminTrackingInfo {
   ttn: string
   statusCode: string
   statusDescription: string
+  citySender?: string
+  cityRecipient?: string
+  warehouseRecipient?: string
+  dateCreated?: string
+  scheduledDeliveryDate?: string
+  actualDeliveryDate?: string
   orderStatus?: AdminOrderStatus
   statusChanged?: boolean
 }
@@ -411,6 +426,9 @@ export interface AdminInstagramPost {
 }
 
 export const adminApi = {
+  dashboardCounters(query: { reviewsSince?: string, usersSince?: string }) {
+    return useNuxtApp().$api<AdminCounters>('/admin/dashboard/counters', { query })
+  },
   dashboard() {
     return useNuxtApp().$api<AdminDashboard>('/admin/dashboard')
   },

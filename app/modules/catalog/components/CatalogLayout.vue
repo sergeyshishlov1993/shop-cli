@@ -8,7 +8,7 @@ defineProps<{
   breadcrumbs: { label: string; to?: string }[]
 }>()
 
-const { products, filters, totalCount, totalPages, loading, params, setPage, applyFilters } = useProductList()
+const { products, filters, totalCount, hasMore, loading, loadingMore, params, loadMore, applyFilters } = useProductList()
 
 // Щільність сітки: 4/2 колонки на десктопі, 2/1 на мобільному
 const large = ref(false)
@@ -51,10 +51,10 @@ function setLarge(value: boolean) {
     <ProductGrid
       :products="products"
       :loading="loading"
-      :page="params.page ?? 1"
-      :total-pages="totalPages"
+      :loading-more="loadingMore"
+      :has-more="hasMore"
       :large="large"
-      @update:page="setPage"
+      @load-more="loadMore"
     />
   </div>
 </template>

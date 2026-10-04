@@ -56,30 +56,36 @@ export function useProductList() {
     promo: route.query.promo ? Number(route.query.promo) : undefined,
     search: (route.query.search as string) || undefined,
     sort: (route.query.sort as SortOption) || undefined,
-    page: route.query.page ? Number(route.query.page) : 1,
+    page: 1, // сторінки підвантажуються скролом (loadMore), в URL їх немає
     limit: 24,
   })
   const params = reactive<CatalogQuery>(readQuery())
 
-  const totalPages = computed(() => Math.ceil(totalCount.value / (params.limit ?? 24)))
+  const loadedPage = ref(1)
+  const loadingMore = ref(false)
+  const hasMore = computed(() => products.value.length < totalCount.value)
+
+  function cleanQuery(page: number) {
+    return Object.fromEntries(
+      Object.entries({ ...params, page }).filter(([, value]) =>
+        value !== undefined && value !== null && (!Array.isArray(value) || value.length > 0),
+      ),
+    )
+  }
 
   async function fetchProducts() {
     const currentRequestId = ++requestId
     const startedAt = Date.now()
     loading.value = true
     try {
-      const cleanParams = Object.fromEntries(
-        Object.entries(params).filter(([, value]) =>
-          value !== undefined && value !== null && (!Array.isArray(value) || value.length > 0),
-        ),
-      )
       const response = await $api<ProductListResponse>('/storefront/products', {
-        params: cleanParams,
+        params: cleanQuery(1),
       })
 
       if (currentRequestId !== requestId) return
 
       products.value = response.items
+      loadedPage.value = 1
       totalCount.value = response.totalCount
       filters.value = response.filters
     } finally {
@@ -94,10 +100,29 @@ export function useProductList() {
     }
   }
 
+  /** Підвантажити наступну порцію й додати її в кінець списку (фільтри ті самі). */
+  async function loadMore() {
+    if (loading.value || loadingMore.value || !hasMore.value) return
+    const currentRequestId = requestId
+    loadingMore.value = true
+    try {
+      const response = await $api<ProductListResponse>('/storefront/products', {
+        params: cleanQuery(loadedPage.value + 1),
+      })
+      if (currentRequestId !== requestId) return // фільтри змінились, поки вантажили
+      const known = new Set(products.value.map(item => item.id))
+      products.value = [...products.value, ...response.items.filter(item => !known.has(item.id))]
+      totalCount.value = response.totalCount
+      loadedPage.value++
+    } finally {
+      loadingMore.value = false
+    }
+  }
+
   function syncToUrl() {
     const query: Record<string, string> = {}
     for (const [key, value] of Object.entries(params)) {
-      if (key === 'limit' || value === undefined || value === null) continue
+      if (key === 'limit' || key === 'page' || value === undefined || value === null) continue
       if (key === 'category' && value === routeCategory.value) continue
       if (Array.isArray(value)) {
         if (value.length) query[key] = value.join(',')
@@ -116,15 +141,6 @@ export function useProductList() {
 
     params[key] = value
     params.page = 1
-    syncToUrl()
-  }
-
-  function setPage(page: number) {
-    if (params.page !== page) {
-      loading.value = true
-    }
-
-    params.page = page
     syncToUrl()
   }
 
@@ -188,11 +204,12 @@ export function useProductList() {
     products,
     filters,
     totalCount,
-    totalPages,
+    hasMore,
     loading,
+    loadingMore,
     params,
     setFilter,
-    setPage,
+    loadMore,
     setSort,
     applyFilters,
     resetFilters,

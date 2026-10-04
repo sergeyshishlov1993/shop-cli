@@ -2,8 +2,10 @@
 import AdminSidebar from '~/modules/admin/components/AdminSidebar.vue'
 import AdminTopbar from '~/modules/admin/components/AdminTopbar.vue'
 import AdminMobileNav from '~/modules/admin/components/AdminMobileNav.vue'
+import { startAdminBadges } from '~/modules/admin/composables/useAdminBadges'
 
 const isSidebarCollapsed = ref(false)
+startAdminBadges()
 
 onMounted(() => {
   isSidebarCollapsed.value = localStorage.getItem('stella-admin-sidebar') === 'collapsed'

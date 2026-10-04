@@ -66,6 +66,7 @@ async function submit() {
       rejectReason: status === 'REJECTED' ? form.rejectReason.trim() : undefined,
       refundAmount: status === 'REFUNDED' ? refundNumber.value : undefined,
     })
+    useState('admin-badges-tick', () => 0).value++
     resetForm(ret.value)
     toast.success(`Статус: ${returnStatusLabels[ret.value.status]}`)
   }

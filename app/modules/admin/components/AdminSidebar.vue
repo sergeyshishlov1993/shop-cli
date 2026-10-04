@@ -1,26 +1,11 @@
 <script setup lang="ts">
-import { adminApi, adminReturnsApi } from '~/modules/admin/adminApi'
+import { ADMIN_BADGE_HINTS, useAdminBadges } from '~/modules/admin/composables/useAdminBadges'
 
 defineProps<{
   collapsed?: boolean
 }>()
 
-// Лічильники «потребує уваги» біля пунктів меню (дані дашборду + нові повернення).
-// Оновлюємо при відкритті, при переході між розділами (після обробки замовлення/відгуку) і раз на хвилину.
-const badges = ref<Record<string, number>>({})
-async function loadBadges() {
-  const [dashboard, returns] = await Promise.allSettled([adminApi.dashboard(), adminReturnsApi.stats()])
-  const pending = dashboard.status === 'fulfilled' ? dashboard.value.pendingActions : null
-  badges.value = {
-    '/admin/orders': pending?.newOrders ?? 0,
-    '/admin/reviews': pending?.pendingReviews ?? 0,
-    '/admin/feedback': pending?.newFeedback ?? 0,
-    '/admin/products': pending?.lowStockVariants ?? 0,
-    '/admin/returns': returns.status === 'fulfilled' ? returns.value.new : 0,
-  }
-}
-onMounted(loadBadges)
-useIntervalFn(loadBadges, 60_000)
+const badges = useAdminBadges()
 
 const navigation = [
   { to: '/admin', label: 'Огляд', icon: 'lucide:layout-dashboard' },
@@ -42,9 +27,6 @@ const navigation = [
   { to: '/admin/settings', label: 'Налаштування', icon: 'lucide:settings' },
 ]
 const route = useRoute()
-watch(() => route.path, loadBadges)
-// Сторінки збільшують лічильник після дій, що змінюють «потребує уваги» (статус, архів) — бейджі оновлюються одразу
-watch(useState('admin-badges-tick', () => 0), loadBadges)
 // Розділ активний і на підсторінках (/admin/products/12), і з query/hash модалок
 function isActive(to: string) {
   return to === '/admin' ? route.path === to : route.path === to || route.path.startsWith(`${to}/`)
@@ -77,15 +59,15 @@ const visibleNavigation = computed(() => navigation.filter(item => returnsEnable
       >
         <span class="relative shrink-0">
           <Icon :name="item.icon" size="19" />
-          <span v-if="collapsed && badges[item.to]" class="absolute -right-1.5 -top-1.5 size-2.5 rounded-full" :class="item.to === '/admin/products' ? 'bg-warning' : 'bg-primary-500'" />
+          <span v-if="collapsed && badges[item.to]" class="absolute -right-1.5 -top-1.5 size-2.5 rounded-full" :class="item.to === '/admin/products' ? 'bg-warning' : 'bg-secondary-900'" />
         </span>
         <span v-if="!collapsed" class="flex-1">{{ item.label }}</span>
-        <!-- «Товари» — скільки варіантів закінчується (жовтий), решта — нові/непрочитані (акцент) -->
+        <!-- «Товари» — скільки варіантів закінчується (жовтий), решта — нові/непрочитані (темний; на активному пункті — світлий) -->
         <span
           v-if="!collapsed && badges[item.to]"
-          class="rounded-full px-2 py-0.5 text-xs font-semibold text-white"
-          :class="item.to === '/admin/products' ? 'bg-warning' : 'bg-primary-500'"
-          :title="item.to === '/admin/products' ? 'Варіантів закінчується' : undefined"
+          class="rounded-full px-2 py-0.5 text-xs font-semibold"
+          :class="isActive(item.to) ? 'bg-white text-secondary-900' : item.to === '/admin/products' ? 'bg-warning/15 text-warning' : 'bg-secondary-900 text-white'"
+          :title="ADMIN_BADGE_HINTS[item.to]"
         >{{ badges[item.to] }}</span>
       </NuxtLink>
     </nav>
