@@ -288,6 +288,7 @@ export interface AdminOrder {
   customerPhone?: string
   customerEmail?: string | null
   status: AdminOrderStatus
+  archivedAt?: string | null
   totalAmount: number
   createdAt: string
   subtotal?: number
@@ -538,7 +539,7 @@ export const adminApi = {
   updateSize(id: number, dto: Partial<AdminSize>) { return useNuxtApp().$api<AdminSize>(`/admin/sizes/${id}`, { method: 'PATCH', body: dto }) },
   deleteSize(id: number) { return useNuxtApp().$api(`/admin/sizes/${id}`, { method: 'DELETE' }) },
 
-  orders(query: { search?: string, status?: string, page?: number, limit?: number, dateFrom?: string, dateTo?: string, userId?: number, utmSource?: string, utmMedium?: string, utmCampaign?: string } = {}) {
+  orders(query: { search?: string, status?: string, archived?: boolean, page?: number, limit?: number, dateFrom?: string, dateTo?: string, userId?: number, utmSource?: string, utmMedium?: string, utmCampaign?: string } = {}) {
     return useNuxtApp().$api<Paginated<AdminOrder>>('/admin/orders', { query })
   },
   updateOrderStatus(id: number, status: AdminOrderStatus) {
@@ -550,6 +551,7 @@ export const adminApi = {
   order(id: number) { return useNuxtApp().$api<AdminOrder>(`/admin/orders/${id}`) },
   orderTracking(id: number) { return useNuxtApp().$api<AdminTrackingInfo | null>(`/admin/orders/${id}/tracking`) },
   updateOrder(id: number, dto: { internalComment?: string, trackingNumber?: string }) { return useNuxtApp().$api<AdminOrder>(`/admin/orders/${id}`, { method: 'PATCH', body: dto }) },
+  archiveOrder(id: number, archived: boolean) { return useNuxtApp().$api<{ id: number, archivedAt: string | null }>(`/admin/orders/${id}/archive`, { method: 'PATCH', body: { archived } }) },
   createTtn(id: number) { return useNuxtApp().$api<AdminOrder>(`/admin/orders/${id}/ttn`, { method: 'POST' }) },
 
   users(query: { search?: string, role?: string, isActive?: boolean, page?: number, limit?: number } = {}) { return useNuxtApp().$api<Paginated<AdminUser>>('/admin/users', { query }) },

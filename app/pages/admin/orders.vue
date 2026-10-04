@@ -6,7 +6,11 @@ import { useToast } from '~/modules/ui/composables/useToast'
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
 const toast = useToast()
+const { confirm } = useConfirm()
 const orders = ref<AdminOrder[]>([])
+// Вкладка «Архів»: непотрібні замовлення (тести, дублі) — приховані зі списку й звітів, можна відновити
+const showArchived = ref(false)
+const badgesTick = useState('admin-badges-tick', () => 0)
 const search = ref('')
 const statusFilter = ref('')
 const isLoading = ref(false)
@@ -45,7 +49,7 @@ const transitions: Record<AdminOrderStatus, AdminOrderStatus[]> = { NEW: ['PROCE
 async function loadOrders() {
   isLoading.value = true
   try {
-    const response = await adminApi.orders({ search: search.value || undefined, status: statusFilter.value || undefined, page: page.value, limit: 20, dateFrom: dateFrom.value || undefined, dateTo: dateTo.value || undefined })
+    const response = await adminApi.orders({ search: search.value || undefined, status: statusFilter.value || undefined, archived: showArchived.value || undefined, page: page.value, limit: 20, dateFrom: dateFrom.value || undefined, dateTo: dateTo.value || undefined })
     orders.value = response.items
     totalCount.value = response.totalCount
     totalPages.value = response.totalPages
@@ -80,6 +84,7 @@ async function changeStatus(order: AdminOrder, newStatus: AdminOrderStatus) {
   if (!newStatus || newStatus === order.status) return
   try {
     order.status = (await adminApi.updateOrderStatus(order.id, newStatus)).status
+    badgesTick.value++
     toast.success(`Статус ${order.orderNumber} оновлено`)
   } catch (error) {
     toast.error(getAdminError(error, 'Недопустимий перехід статусу'))
@@ -92,6 +97,21 @@ function transitionOptions(order: AdminOrder) {
 }
 
 async function applyFilters() { page.value = 1; await loadOrders() }
+async function switchArchive(value: boolean) { if (showArchived.value === value) return; showArchived.value = value; await applyFilters() }
+
+async function toggleArchive(order: AdminOrder) {
+  const archive = !showArchived.value
+  if (archive && !(await confirm({ title: `Перенести ${order.orderNumber} в архів?`, message: 'Замовлення зникне зі списку, дашборду та звітів. Відновити можна у вкладці «Архів».', confirmText: 'В архів' }))) return
+  try {
+    await adminApi.archiveOrder(order.id, archive)
+    orders.value = orders.value.filter(item => item.id !== order.id)
+    totalCount.value = Math.max(0, totalCount.value - 1)
+    badgesTick.value++
+    toast.success(archive ? `${order.orderNumber} перенесено в архів` : `${order.orderNumber} відновлено`)
+  } catch (error) {
+    toast.error(getAdminError(error))
+  }
+}
 async function changePage(value: number) { page.value = value; await loadOrders() }
 
 await loadOrders()
@@ -99,7 +119,13 @@ await loadOrders()
 
 <template>
   <div class="mx-auto max-w-7xl space-y-6">
-    <div><h1 class="text-2xl font-bold text-secondary-900 sm:text-3xl">Замовлення</h1><p class="mt-1 text-sm text-secondary-500">{{ totalCount }} замовлень, керування статусами та виконанням.</p></div>
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div><h1 class="text-2xl font-bold text-secondary-900 sm:text-3xl">Замовлення</h1><p class="mt-1 text-sm text-secondary-500">{{ totalCount }} {{ showArchived ? 'в архіві' : 'замовлень, керування статусами та виконанням' }}.</p></div>
+      <div class="flex rounded-lg border border-secondary-200 bg-white p-1 text-sm">
+        <button type="button" class="rounded-md px-4 py-1.5 transition" :class="!showArchived ? 'bg-secondary-900 font-semibold text-white' : 'text-secondary-600 hover:text-secondary-900'" @click="switchArchive(false)">Активні</button>
+        <button type="button" class="flex items-center gap-1.5 rounded-md px-4 py-1.5 transition" :class="showArchived ? 'bg-secondary-900 font-semibold text-white' : 'text-secondary-600 hover:text-secondary-900'" @click="switchArchive(true)"><Icon name="lucide:archive" size="15" />Архів</button>
+      </div>
+    </div>
     <form class="grid gap-3 rounded-xl border border-secondary-200 bg-white p-4 md:grid-cols-5" @submit.prevent="applyFilters">
       <BInput v-model="search" class="w-full" placeholder="Номер, клієнт або телефон" />
       <BSelect v-model="statusFilter" class="w-full" :options="statusFilterOptions" />
@@ -130,9 +156,16 @@ await loadOrders()
                   />
                 </div>
               </td>
-              <td class="px-5 py-4 admin-table__actions"><BBtn variant="icon" size="sm" title="Деталі" @click="openOrder(order.id)"><Icon name="lucide:eye" /></BBtn></td>
+              <td class="px-5 py-4 admin-table__actions">
+                <div class="flex justify-end gap-1">
+                  <BBtn variant="icon" size="sm" title="Деталі" aria-label="Деталі" @click="openOrder(order.id)"><Icon name="lucide:eye" /></BBtn>
+                  <BBtn variant="icon" size="sm" :title="showArchived ? 'Відновити з архіву' : 'В архів'" :aria-label="showArchived ? 'Відновити з архіву' : 'В архів'" @click="toggleArchive(order)">
+                    <Icon :name="showArchived ? 'lucide:archive-restore' : 'lucide:archive'" />
+                  </BBtn>
+                </div>
+              </td>
             </tr>
-            <tr v-if="!orders.length"><td colspan="6" class="px-5 py-12 text-center text-secondary-500">Замовлень не знайдено</td></tr>
+            <tr v-if="!orders.length"><td colspan="6" class="px-5 py-12 text-center text-secondary-500">{{ showArchived ? 'Архів порожній' : 'Замовлень не знайдено' }}</td></tr>
           </tbody>
         </table>
       </div>
